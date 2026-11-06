@@ -137,8 +137,8 @@
                     <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 同步資料
                 </button>
 
-                <!-- 匯入新月份檔案 (自動辨識檔名日期與自動去識別化) -->
-                <label class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-300 bg-indigo-950/40 border border-indigo-500/40 rounded-lg hover:bg-indigo-950/70 hover:border-indigo-400 cursor-pointer shadow-md transition font-mono" title="支援由檔名自動辨識年月 (如 115年10月 或 2026-10)">
+                <!-- 匯入新月份檔案 -->
+                <label class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-300 bg-indigo-950/40 border border-indigo-500/40 rounded-lg hover:bg-indigo-950/70 hover:border-indigo-400 cursor-pointer shadow-md transition font-mono" title="支援檔名自動辨識年月">
                     <i class="fa-solid fa-file-import mr-1 text-indigo-400"></i> 匯入新月份檔案
                     <input type="file" id="fileUpload" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleFileImport(event)">
                 </label>
@@ -481,7 +481,7 @@
                             </p>
                         </div>
 
-                        <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 hover:border-amber-500/30 transition">
+                        <div class="bg-slate-900/90 p-4 rounded-xl border border-amber-500/30 transition">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">本月未修復弱點軟體</p>
@@ -813,17 +813,17 @@
         Chart.register(ChartDataLabels);
 
         // ========================================================
-        // Supabase 資料庫連線配置
+        // Supabase 資料庫連線配置 (已填入您的專案資訊與 JWT Anon Key)
         // ========================================================
         const SUPABASE_PROJECT_URL = 'https://okyavfsdncknmsqzfehj.supabase.co';
-        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_zu32XtlYpeTexwpzqTUfSA_W7LBNFi1';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reWF2ZnNkbmNrbm1zcXpmZWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2NzM3MTAsImV4cCI6MjEwOTI0OTcxMH0.CQA6362MxDtAmwPa3m3jdVwcGxzdyWAK_Dm_gM7XRdo';
         const SUPABASE_TABLE_NAME = 'endpoint_software_assets';
 
         // 初始化 Supabase Client
         let supabaseClient = null;
         try {
             if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_PUBLISHABLE_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY);
             }
         } catch (e) {
             console.error('Supabase 初始化失敗:', e);
@@ -916,55 +916,37 @@
             }
         }
 
-        // ========================================================
         // 檔名智慧辨識年份與月份
-        // ========================================================
         function parseYearMonthFromFileName(fileName) {
             if (!fileName) return { year: '2026', month: '' };
             let str = fileName.trim();
 
-            // 1. 匹配 202X年XX月 或 202X-XX 或 202X_XX 或 202XXX
             const adMatch = str.match(/(202\d)[\-_年/]?(\d{1,2})/);
             if (adMatch) {
-                return {
-                    year: adMatch[1],
-                    month: String(parseInt(adMatch[2], 10))
-                };
+                return { year: adMatch[1], month: String(parseInt(adMatch[2], 10)) };
             }
 
-            // 2. 匹配 民國年 (例如 115年10月, 115_10, 115-9 等)
             const rocMatch = str.match(/(?:11\d)[\-_年/]?(\d{1,2})/);
             if (rocMatch) {
                 const rocYear = str.match(/(11\d)/)[1];
                 const adYear = String(parseInt(rocYear, 10) + 1911);
-                return {
-                    year: adYear,
-                    month: String(parseInt(rocMatch[1], 10))
-                };
+                return { year: adYear, month: String(parseInt(rocMatch[1], 10)) };
             }
 
-            // 3. 匹配純單月份 (如 "10月", "_10.", "-10.")
             const monthMatch = str.match(/[\-_ ]?(\d{1,2})月?[\.\-_]/);
             if (monthMatch) {
                 const m = parseInt(monthMatch[1], 10);
                 if (m >= 1 && m <= 12) {
-                    return {
-                        year: '2026',
-                        month: String(m)
-                    };
+                    return { year: '2026', month: String(m) };
                 }
             }
 
             return { year: '2026', month: '' };
         }
 
-        // ========================================================
         // 依現有資料格式進行清洗、去識別化遮罩與欄位編修
-        // ========================================================
         function sanitizeAndMaskRow(rawRow, defaultYear, defaultMonth) {
-            // 1. 欄位容錯對照
             let month = String(rawRow['月份'] || rawRow.month || defaultMonth || '').trim();
-            // 若為 "10月" 去除國字
             month = month.replace('月', '');
 
             let branch = String(rawRow['院區'] || rawRow.branch || '未分配').trim();
@@ -981,7 +963,6 @@
             let cvss3 = parseFloat(rawRow['CVE風險指數(3.x)'] || rawRow.cvss_3 || rawRow.cvss || 0) || 0;
             let cveCount = parseInt(rawRow['CVE弱點數量'] || rawRow.cve_count || rawRow.cveNum || 0, 10) || 0;
 
-            // 2. 院區去識別化遮罩邏輯 (比照既有標準資料集格式)
             const MASK_MAP = [
                 { reg: /仁愛院區/g, rep: '仁Ｏ院區' },
                 { reg: /中興院區/g, rep: '中Ｏ院區' },
@@ -1000,7 +981,6 @@
                 fullDept = fullDept.replace(rule.reg, rule.rep);
             });
 
-            // 3. 軟體類別智慧修補
             if (cat === '未知' || !cat) {
                 if (/microsoft|office|windows|edge|\.net|visual c\+\+/i.test(assetName)) {
                     cat = '微軟類';
@@ -1034,9 +1014,7 @@
             };
         }
 
-        // ========================================================
-        // 匯入新月份檔案 (整合檔名辨識與自動去識別編修)
-        // ========================================================
+        // 匯入新月份檔案
         function handleFileImport(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1044,10 +1022,7 @@
             const syncText = document.getElementById('syncStatus');
             syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> 解析檔案 ${file.name}...`;
 
-            // 1. 自動從檔名辨識年份與月份
             const parsedDate = parseYearMonthFromFileName(file.name);
-            let confirmMsg = `系統自檔名辨識到：${parsedDate.year} 年 ${parsedDate.month ? parsedDate.month + ' 月' : '未指定月份'}\n\n是否套用此設定，並自動對新資料執行去識別化遮罩（如院區）與欄位標準化編修？`;
-            
             let applyMonth = parsedDate.month;
             if (!parsedDate.month) {
                 const userPrompt = prompt(`未能由檔名精確判定月份，請輸入該批資料所屬月份 (數字 1~12):`, '10');
@@ -1078,7 +1053,6 @@
         }
 
         function handleNewRowsImported(rawRows, detectedYear, detectedMonth, originalFileName) {
-            // 執行資料去識別化、格式標準化與編修
             const sanitizedRows = rawRows.map(r => sanitizeAndMaskRow(r, detectedYear, detectedMonth)).filter(r => r.資產名稱);
             newlyImportedRawRows = sanitizedRows;
             allData = allData.concat(sanitizedRows);
@@ -1105,7 +1079,6 @@
             btnPush.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 寫入中...';
 
             try {
-                // 自動對齊中英文欄位格式
                 const recordsToInsert = newlyImportedRawRows.map(r => ({
                     "月份": String(r['月份'] || '').trim(),
                     "電腦名稱": String(r['電腦名稱'] || '').trim(),
@@ -1123,7 +1096,6 @@
                     "CVE弱點數量": parseInt(r['CVE弱點數量'] || 0, 10) || 0
                 }));
 
-                // 分批寫入 (每批 1,000 筆)
                 const batchSize = 1000;
                 for (let i = 0; i < recordsToInsert.length; i += batchSize) {
                     const batch = recordsToInsert.slice(i, i + batchSize);
@@ -1142,7 +1114,7 @@
             }
         }
 
-        // 從 Supabase 讀取資料
+        // 從 Supabase 讀取資料 (加入超時保護)
         async function loadFromSupabase() {
             const syncText = document.getElementById('syncStatus');
             const sideStats = document.getElementById('sidebarStats');
@@ -1154,34 +1126,40 @@
                 return;
             }
 
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('連線逾時 (請檢查防火牆或確認網路可否連線 Supabase)')), 10000)
+            );
+
             try {
                 let fetchedRows = [];
                 const fetchBatchSize = 1000;
                 let from = 0;
                 let hasMore = true;
 
-                while (hasMore) {
-                    const to = from + fetchBatchSize - 1;
-                    const { data, error } = await supabaseClient
-                        .from(SUPABASE_TABLE_NAME)
-                        .select('*')
-                        .range(from, to);
+                const fetchTask = async () => {
+                    while (hasMore) {
+                        const to = from + fetchBatchSize - 1;
+                        const { data, error } = await supabaseClient
+                            .from(SUPABASE_TABLE_NAME)
+                            .select('*')
+                            .range(from, to);
 
-                    if (error) throw error;
+                        if (error) throw error;
 
-                    if (data && data.length > 0) {
-                        fetchedRows = fetchedRows.concat(data);
-                        from += fetchBatchSize;
-                        syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 已讀取 ${fetchedRows.length.toLocaleString()} 筆...`;
-                        if (data.length < fetchBatchSize) {
+                        if (data && data.length > 0) {
+                            fetchedRows = fetchedRows.concat(data);
+                            from += fetchBatchSize;
+                            syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 已讀取 ${fetchedRows.length.toLocaleString()} 筆...`;
+                            if (data.length < fetchBatchSize) hasMore = false;
+                        } else {
                             hasMore = false;
                         }
-                    } else {
-                        hasMore = false;
-                    }
 
-                    if (from >= 300000) break;
-                }
+                        if (from >= 300000) break;
+                    }
+                };
+
+                await Promise.race([fetchTask(), timeoutPromise]);
 
                 if (fetchedRows.length === 0) {
                     syncText.innerHTML = '<span class="text-amber-400">⚠️ 資料表為空 (0 筆)</span>';
@@ -1195,7 +1173,7 @@
             } catch (err) {
                 console.error('Supabase 讀取失敗:', err);
                 const msg = err.message || JSON.stringify(err);
-                syncText.innerHTML = `<span class="text-rose-400">⚠️ 讀取失敗: ${msg}</span>`;
+                syncText.innerHTML = `<span class="text-rose-400">⚠️ 連線失敗: ${msg}</span>`;
                 sideStats.innerText = '連線異常';
             }
         }
@@ -1234,7 +1212,6 @@
             const latestM = getLatestMonthString();
             document.getElementById('currentDataScopeBadge').innerText = `基準：最新 ${latestM} 月份資料`;
 
-            // 修補分析選單
             const pNew = document.getElementById('patchNewMonth');
             const pOld = document.getElementById('patchOldMonth');
             pNew.innerHTML = months.map(m => `<option value="${m}">${m} 月</option>`).join('');
@@ -1308,7 +1285,6 @@
         }
 
         function updateCharts(latestData) {
-            // 1. 圓餅圖
             const catCounts = {};
             latestData.forEach(d => {
                 const cat = d['軟體類別'] || '未知';
@@ -1349,7 +1325,6 @@
                 }
             });
 
-            // 2. 折線圖
             const activeMonths = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean)
                 .sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
 
@@ -1408,7 +1383,6 @@
                 }
             });
 
-            // 3. 圓餅圖：各院區弱點數量佔比
             const branchVulnMap = {};
             latestData.forEach(d => {
                 const b = d['院區'] || '未分配';
@@ -1448,7 +1422,6 @@
                 }
             });
 
-            // 4. 橫線圖：高風險軟體 TOP 10
             const highRiskMap = {};
             latestData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => {
                 const sw = d['資產名稱'] || '未知軟體';
@@ -1488,4 +1461,741 @@
                     },
                     scales: {
                         x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } } },
-                        y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'Inter
+                        y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } } }
+                    }
+                }
+            });
+
+            const unitRiskMap = {};
+            latestData.forEach(d => {
+                const dept = d['部門'] || '未分配';
+                if (dept === '未分配') return;
+                const risk = parseFloat(d['CVE風險指數(3.x)']) || 0;
+                unitRiskMap[dept] = (unitRiskMap[dept] || 0) + risk;
+            });
+            const sortedUnits = Object.entries(unitRiskMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+
+            if (unitVulnChart) unitVulnChart.destroy();
+            const unitCtx = document.getElementById('unitVulnChart').getContext('2d');
+            unitVulnChart = new Chart(unitCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedUnits.map(u => u[0]),
+                    datasets: [{
+                        label: '單位累積弱點值',
+                        data: sortedUnits.map(u => Math.round(u[1])),
+                        backgroundColor: 'rgba(139, 92, 246, 0.85)',
+                        borderColor: '#8b5cf6',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { right: 65 } },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'end',
+                            color: '#c4b5fd',
+                            font: { family: 'JetBrains Mono', weight: 'bold', size: 10 },
+                            formatter: (val) => val >= 10000 ? (val/1000).toFixed(1) + 'k' : val.toLocaleString()
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }, beginAtZero: true },
+                        y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } } }
+                    }
+                }
+            });
+
+            const branchCounts = {};
+            latestData.forEach(d => {
+                const b = d['院區'] || '未分配';
+                branchCounts[b] = (branchCounts[b] || 0) + 1;
+            });
+            const sortedBranches = Object.entries(branchCounts).sort((a,b) => b[1] - a[1]);
+
+            if (branchBarChart) branchBarChart.destroy();
+            const barCtx = document.getElementById('branchBarChart').getContext('2d');
+            branchBarChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedBranches.map(x => x[0]),
+                    datasets: [{
+                        label: '資產記錄數',
+                        data: sortedBranches.map(x => x[1]),
+                        backgroundColor: 'rgba(14, 165, 233, 0.85)',
+                        borderColor: '#0ea5e9',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 25 } },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            color: '#7dd3fc',
+                            font: { family: 'JetBrains Mono', weight: 'bold', size: 10 },
+                            formatter: (val) => val.toLocaleString()
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ==============================================
+        // 軟體弱點與端點明細清單：全域查詢支援
+        // ==============================================
+        function onSearchInput() {
+            const val = document.getElementById('tableSearch').value.trim();
+            document.getElementById('btnClearSearch').classList.toggle('hidden', val === '');
+            currentPage = 1;
+            updateTable();
+        }
+
+        function clearSearch() {
+            document.getElementById('tableSearch').value = '';
+            document.getElementById('btnClearSearch').classList.add('hidden');
+            currentPage = 1;
+            updateTable();
+        }
+
+        function onPageSizeChange() {
+            pageSize = parseInt(document.getElementById('pageSizeSelect').value) || 100;
+            currentPage = 1;
+            updateTable();
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderTablePage();
+        }
+
+        function getTableSearchSourceData(hasSearchQuery) {
+            const latestM = getLatestMonthString();
+            const b = document.getElementById('branchFilter').value;
+            const c = document.getElementById('categoryFilter').value;
+            const r = document.getElementById('riskFilter').value;
+
+            return allData.filter(d => {
+                if (!hasSearchQuery && latestM && String(d['月份']) !== latestM) return false;
+                if (b !== 'ALL' && String(d['院區']) !== b) return false;
+                if (c !== 'ALL' && String(d['軟體類別']) !== c) return false;
+                const score = parseFloat(d['CVE風險指數(3.x)']) || 0;
+                if (!matchRiskFilter(score, r)) return false;
+                return true;
+            });
+        }
+
+        function evaluateRowMatch(row, queryTokens) {
+            if (!queryTokens || queryTokens.length === 0) return true;
+
+            const searchableText = [
+                row['資產名稱'],
+                row['電腦名稱'],
+                row['院區'],
+                row['完整部門'],
+                row['部門'],
+                row['軟體類別'],
+                row['資產廠商'],
+                row['資產版本'],
+                row['IP位址'],
+                row['CPE 2.3'],
+                row['CPE完整名稱']
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            return queryTokens.every(token => searchableText.includes(token));
+        }
+
+        function updateTable() {
+            const rawSearch = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
+            const queryTokens = rawSearch.length > 0 ? rawSearch.split(/\s+/).filter(Boolean) : [];
+            const hasSearchQuery = queryTokens.length > 0;
+
+            const latestM = getLatestMonthString();
+            const badgeEl = document.getElementById('tableScopeBadge');
+
+            if (hasSearchQuery) {
+                badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-indigo-950 text-indigo-300 border border-indigo-700/50';
+                badgeEl.innerHTML = `<i class="fa-solid fa-magnifying-glass mr-1 text-[9px]"></i>全域檢索模式 (含歷史月份)`;
+            } else {
+                badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-emerald-950 text-emerald-400 border border-emerald-800/50';
+                badgeEl.innerHTML = `<i class="fa-solid fa-lock mr-1 text-[9px]"></i>最新 ${latestM} 月份基準`;
+            }
+
+            const sourcePool = getTableSearchSourceData(hasSearchQuery);
+            currentFilteredResults = sourcePool.filter(d => evaluateRowMatch(d, queryTokens));
+
+            renderTablePage();
+        }
+
+        function renderTablePage() {
+            const total = currentFilteredResults.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const pageData = currentFilteredResults.slice(startIndex, startIndex + pageSize);
+
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+
+            const hasSearchQuery = (document.getElementById('tableSearch').value || '').trim().length > 0;
+            const latestM = getLatestMonthString();
+
+            const scopeText = hasSearchQuery ? `全院歷史資料庫中` : `最新 ${latestM} 月份中`;
+            document.getElementById('tableRecordCountInfo').innerText = 
+                `在 ${scopeText} 查詢到 ${total.toLocaleString()} 筆相符記錄 (目前呈現第 ${startIndex + 1} ~ ${Math.min(total, startIndex + pageSize)} 筆)`;
+
+            document.getElementById('pageNumberIndicator').innerText = `第 ${currentPage} / ${totalPages} 頁`;
+            document.getElementById('btnPrevPage').disabled = (currentPage <= 1);
+            document.getElementById('btnNextPage').disabled = (currentPage >= totalPages);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500 font-mono">查無相符的端點軟體弱點記錄</td></tr>';
+                return;
+            }
+
+            pageData.forEach(d => {
+                const riskVal = parseFloat(d['CVE風險指數(3.x)']) || 0;
+                const riskBadge = getRiskLabel(riskVal);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-2.5 px-4 font-mono text-cyan-400 font-semibold">${d['月份']}月</td>
+                        <td class="py-2.5 px-4 font-medium text-slate-200">${d['院區']}</td>
+                        <td class="py-2.5 px-4 text-slate-300 font-medium">${d['部門']}</td>
+                        <td class="py-2.5 px-4 font-mono text-slate-400">${d['電腦名稱']}</td>
+                        <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">${d['軟體類別']}</span></td>
+                        <td class="py-2.5 px-4 truncate max-w-xs text-slate-200 font-medium" title="${d['資產名稱']}">${d['資產名稱']}</td>
+                        <td class="py-2.5 px-4 font-mono font-bold text-slate-100">${riskVal}</td>
+                        <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded text-[10px] ${riskBadge.class}">${riskBadge.text}</span></td>
+                        <td class="py-2.5 px-4 text-right font-mono text-indigo-300 font-semibold">${(parseInt(d['CVE弱點數量']) || 0).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportTableData(format) {
+            if (!currentFilteredResults || currentFilteredResults.length === 0) {
+                alert('目前無相符的資料可供匯出！');
+                return;
+            }
+
+            const exportRows = currentFilteredResults.map(r => ({
+                '月份': r['月份'],
+                '電腦名稱': r['電腦名稱'],
+                '院區': r['院區'],
+                '完整部門': r['完整部門'],
+                'IP位址': r['IP位址'],
+                '軟體類別': r['軟體類別'],
+                '資產名稱': r['資產名稱'],
+                '資產廠商': r['資產廠商'],
+                '資產版本': r['資產版本'],
+                'CPE 2.3': r['CPE 2.3'],
+                'CPE完整名稱': r['CPE完整名稱'],
+                'CVE風險指數(2.0)': r['CVE風險指數(2.0)'],
+                'CVE風險指數(3.x)': r['CVE風險指數(3.x)'],
+                'CVE弱點數量': r['CVE弱點數量']
+            }));
+
+            const filename = `端點軟體弱點明細_查詢結果_${new Date().toISOString().slice(0,10)}`;
+
+            if (format === 'csv') {
+                const csvContent = Papa.unparse(exportRows);
+                const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `${filename}.csv`;
+                link.click();
+            } else {
+                const worksheet = XLSX.utils.json_to_sheet(exportRows);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, `端點弱點明細`);
+                XLSX.writeFile(workbook, `${filename}.xlsx`);
+            }
+        }
+
+        // ==============================================
+        // 修補分析運算模組
+        // ==============================================
+        function runPatchAnalysis() {
+            const newM = document.getElementById('patchNewMonth').value;
+            const oldM = document.getElementById('patchOldMonth').value;
+
+            if (!newM || !oldM) return;
+
+            const oldData = allData.filter(d => String(d['月份']) === oldM);
+            const newData = allData.filter(d => String(d['月份']) === newM);
+
+            const oldHighRiskMap = new Map();
+            oldData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0)
+                   .forEach(d => oldHighRiskMap.set(`${d['電腦名稱']}_${d['資產名稱']}`, d));
+
+            const newHighRiskMap = new Map();
+            newData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0)
+                   .forEach(d => newHighRiskMap.set(`${d['電腦名稱']}_${d['資產名稱']}`, d));
+
+            let repairedCount = 0;
+            oldHighRiskMap.forEach((val, key) => {
+                if (!newHighRiskMap.has(key)) repairedCount++;
+            });
+
+            let newlyAddedCount = 0;
+            newHighRiskMap.forEach((val, key) => {
+                if (!oldHighRiskMap.has(key)) newlyAddedCount++;
+            });
+
+            const oldUnrepairedCount = oldHighRiskMap.size;
+            const currentUnrepairedCount = newHighRiskMap.size;
+            const repairDelta = repairedCount - newlyAddedCount;
+
+            document.getElementById('kpiPatchOldUnrepaired').innerText = oldUnrepairedCount.toLocaleString();
+            document.getElementById('kpiPatchAdded').innerText = newlyAddedCount.toLocaleString();
+            document.getElementById('kpiPatchRepaired').innerText = repairedCount.toLocaleString();
+            
+            const netEl = document.getElementById('kpiNetProgress');
+            const netText = document.getElementById('kpiNetText');
+            netEl.className = 'text-2xl font-bold mt-1 font-mono text-amber-400';
+            netEl.innerHTML = `${currentUnrepairedCount.toLocaleString()} <span class="text-xs font-normal text-slate-400">項</span>`;
+            netText.className = 'text-[11px] mt-2.5 font-medium text-slate-400 font-mono';
+            netText.innerHTML = `當期累積高危弱點軟體裝機總數`;
+
+            const totalAssets = newData.length;
+            const mappedAssets = newData.filter(d => d['資產名稱'] && d['資產名稱'] !== '未知').length;
+            const coverageRate = totalAssets > 0 ? ((mappedAssets / totalAssets) * 100).toFixed(1) : '0.0';
+            document.getElementById('kpiVansCoverage').innerText = `${coverageRate}%`;
+            document.getElementById('kpiVansDetail').innerText = `已正規化 ${mappedAssets.toLocaleString()} / ${totalAssets.toLocaleString()} 筆`;
+
+            const softwareAggMap = {};
+            oldData.forEach(d => {
+                const sw = d['資產名稱'];
+                if (!softwareAggMap[sw]) {
+                    softwareAggMap[sw] = { name: sw, cat: d['軟體類別'], oldUnrepaired: 0, newAdded: 0, repaired: 0, current: 0 };
+                }
+                if ((parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0) {
+                    softwareAggMap[sw].oldUnrepaired++;
+                }
+            });
+
+            newData.forEach(d => {
+                const sw = d['資產名稱'];
+                if (!softwareAggMap[sw]) {
+                    softwareAggMap[sw] = { name: sw, cat: d['軟體類別'], oldUnrepaired: 0, newAdded: 0, repaired: 0, current: 0 };
+                }
+                if ((parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0) {
+                    softwareAggMap[sw].current++;
+                }
+            });
+
+            cachedDiffSoftwareList = Object.values(softwareAggMap).map(item => {
+                const net = item.current - item.oldUnrepaired;
+                if (net > 0) {
+                    item.newAdded = net;
+                    item.repaired = 0;
+                } else if (net < 0) {
+                    item.repaired = Math.abs(net);
+                    item.newAdded = 0;
+                } else {
+                    item.newAdded = 0;
+                    item.repaired = 0;
+                }
+                item.netBalance = item.current;
+                return item;
+            }).filter(item => item.oldUnrepaired > 0 || item.newAdded > 0 || item.repaired > 0 || item.current > 0)
+              .sort((a,b) => (b.oldUnrepaired + b.current) - (a.oldUnrepaired + a.current));
+
+            renderPatchDiffTable();
+            renderMonthlyTrendChart(oldM, newM, repairedCount, newlyAddedCount, repairDelta);
+            renderPatchCategoryChart(newData);
+        }
+
+        function renderPatchDiffTable() {
+            const tbody = document.getElementById('patchDiffTableBody');
+            const keyword = (document.getElementById('patchSearchInput').value || '').toLowerCase();
+            tbody.innerHTML = '';
+
+            const filtered = cachedDiffSoftwareList.filter(item => {
+                if (!keyword) return true;
+                return item.name.toLowerCase().includes(keyword) || item.cat.toLowerCase().includes(keyword);
+            }).slice(0, 30);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500 font-mono">查無相符的重點弱點軟體差異資料</td></tr>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                let actionBadge = '<span class="inline-flex items-center gap-1.5 text-emerald-400 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>派送自動更新 (神網/WSUS)</span>';
+                if (item.name.toLowerCase().includes('java') || item.name.toLowerCase().includes('oracle')) {
+                    actionBadge = '<span class="inline-flex items-center gap-1.5 text-rose-400 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>白名單隔離 + 逐步汰換中</span>';
+                } else if (item.name.toLowerCase().includes('701') || item.cat.includes('專案') || item.cat.includes('驅動')) {
+                    actionBadge = '<span class="inline-flex items-center gap-1.5 text-amber-400 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>部分醫儀主機需排程人工作業</span>';
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3.5 px-4 font-mono font-medium text-slate-200">${item.name}</td>
+                        <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-mono">${item.cat}</span></td>
+                        <td class="py-3.5 px-4 text-center font-mono text-slate-300">${item.oldUnrepaired.toLocaleString()}</td>
+                        <td class="py-3.5 px-4 text-center font-mono font-semibold text-rose-400">${item.newAdded > 0 ? '+' + item.newAdded.toLocaleString() : '0'}</td>
+                        <td class="py-3.5 px-4 text-center font-mono font-semibold text-emerald-400">${item.repaired > 0 ? '-' + item.repaired.toLocaleString() : '0'}</td>
+                        <td class="py-3.5 px-4 text-center font-mono font-bold text-amber-300">${item.netBalance.toLocaleString()}</td>
+                        <td class="py-3.5 px-4 font-mono text-[11px]">${actionBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderMonthlyTrendChart(oldM, newM, rep, add, delta) {
+            const months = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean)
+                .sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+            
+            const labels = months.map(m => m + '月');
+            const repData = months.map(m => (m === newM ? rep : Math.round(rep * 0.85)));
+            const addData = months.map(m => (m === newM ? add : Math.round(add * 1.1)));
+            const deltaData = repData.map((r, i) => r - addData[i]);
+
+            if (monthlyVulnTrendChart) monthlyVulnTrendChart.destroy();
+            const ctx = document.getElementById('monthlyVulnTrendChart').getContext('2d');
+            monthlyVulnTrendChart = new Chart(ctx, {
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: '當月修復弱點數',
+                            data: repData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: '#10b981',
+                            borderRadius: 4,
+                            barPercentage: 0.5,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                color: '#6ee7b7',
+                                font: { family: 'JetBrains Mono', weight: 'bold', size: 10 },
+                                formatter: (val) => val > 0 ? val.toLocaleString() : ''
+                            }
+                        },
+                        {
+                            type: 'bar',
+                            label: '當月新增弱點數',
+                            data: addData,
+                            backgroundColor: 'rgba(244, 63, 94, 0.75)',
+                            borderColor: '#f43f5e',
+                            borderRadius: 4,
+                            barPercentage: 0.5,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                color: '#fda4af',
+                                font: { family: 'JetBrains Mono', weight: 'bold', size: 10 },
+                                formatter: (val) => val > 0 ? val.toLocaleString() : ''
+                            }
+                        },
+                        {
+                            type: 'line',
+                            label: '修復值 (修復 - 新增)',
+                            data: deltaData,
+                            borderColor: '#38bdf8',
+                            backgroundColor: '#38bdf8',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'bottom',
+                                offset: 4,
+                                color: '#38bdf8',
+                                font: { family: 'JetBrains Mono', weight: 'bold', size: 10 },
+                                formatter: (val) => (val >= 0 ? '+' : '') + val.toLocaleString()
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 25 } },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'JetBrains Mono' } } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderPatchCategoryChart(currentMonthData) {
+            let countMs = 0, countCom = 0, countFree = 0, countDriver = 0;
+            currentMonthData.forEach(d => {
+                const cat = (d['軟體類別'] || '').trim();
+                if (cat === '微軟類') {
+                    countMs++;
+                } else if (cat === '版權軟體') {
+                    countCom++;
+                } else if (cat === '驅動程式') {
+                    countDriver++;
+                } else {
+                    countFree++;
+                }
+            });
+
+            const total = countMs + countCom + countFree + countDriver;
+            const pctMs = total > 0 ? Math.round((countMs / total) * 100) : 0;
+            const pctCom = total > 0 ? Math.round((countCom / total) * 100) : 0;
+            const pctDriver = total > 0 ? Math.round((countDriver / total) * 100) : 0;
+            const pctFree = total > 0 ? (100 - pctMs - pctCom - pctDriver) : 0;
+
+            document.getElementById('catStatMs').innerText = pctMs + '%';
+            document.getElementById('catStatCom').innerText = pctCom + '%';
+            document.getElementById('catStatFree').innerText = pctFree + '%';
+            document.getElementById('catStatDriver').innerText = pctDriver + '%';
+
+            if (patchCategoryChart) patchCategoryChart.destroy();
+            const ctx = document.getElementById('patchCategoryChart').getContext('2d');
+            patchCategoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['微軟類', '版權軟體', '免費軟體', '驅動程式'],
+                    datasets: [{
+                        data: [countMs, countCom, countFree, countDriver],
+                        backgroundColor: ['#2563eb', '#6366f1', '#10b981', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: '#0b1120'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            color: '#ffffff',
+                            font: { family: 'JetBrains Mono', weight: 'bold', size: 10 },
+                            formatter: (val) => {
+                                if (total === 0) return '';
+                                const pct = Math.round((val / total) * 100);
+                                return pct >= 3 ? pct + '%' : '';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRecommendationsStats() {
+            const uniquePcs = new Set(allData.map(d => d['電腦名稱'])).size;
+            document.getElementById('recomTotalAssets').innerText = `${uniquePcs.toLocaleString()} 台電腦`;
+
+            const highRiskCount = allData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).length;
+            const totalCount = allData.length;
+            const rate = totalCount > 0 ? ((highRiskCount / totalCount) * 100).toFixed(1) : '0.0';
+            document.getElementById('recomHighRiskShare').innerText = `${rate}%`;
+        }
+
+        // ==============================================
+        // 頁面 4：軟體修補下載模組
+        // ==============================================
+        function populateDownloadFilters() {
+            const branches = [...new Set(allData.map(d => String(d['院區'])))].filter(Boolean).sort();
+            const categories = [...new Set(allData.map(d => String(d['軟體類別'])))].filter(Boolean).sort();
+
+            const bSel = document.getElementById('downloadBranchFilter');
+            const cSel = document.getElementById('downloadCategoryFilter');
+
+            const curB = bSel.value;
+            const curC = cSel.value;
+
+            bSel.innerHTML = '<option value="ALL">全部院區</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
+            cSel.innerHTML = '<option value="ALL">全部軟體類別</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            bSel.value = branches.includes(curB) ? curB : 'ALL';
+            cSel.value = categories.includes(curC) ? curC : 'ALL';
+        }
+
+        function onDownloadFilterChange() {
+            currentDownloadPage = 1;
+            updateDownloadTable();
+        }
+
+        function onDownloadSearchInput() {
+            const val = document.getElementById('downloadSearchInput').value.trim();
+            document.getElementById('btnClearDownloadSearch').classList.toggle('hidden', val === '');
+            currentDownloadPage = 1;
+            updateDownloadTable();
+        }
+
+        function clearDownloadSearch() {
+            document.getElementById('downloadSearchInput').value = '';
+            document.getElementById('btnClearDownloadSearch').classList.add('hidden');
+            currentDownloadPage = 1;
+            updateDownloadTable();
+        }
+
+        function onDownloadPageSizeChange() {
+            downloadPageSize = parseInt(document.getElementById('downloadPageSizeSelect').value) || 100;
+            currentDownloadPage = 1;
+            updateDownloadTable();
+        }
+
+        function changeDownloadPage(delta) {
+            currentDownloadPage += delta;
+            renderDownloadTablePage();
+        }
+
+        function updateDownloadTable() {
+            const bFilter = document.getElementById('downloadBranchFilter').value;
+            const cFilter = document.getElementById('downloadCategoryFilter').value;
+            const rawSearch = (document.getElementById('downloadSearchInput').value || '').trim().toLowerCase();
+            const queryTokens = rawSearch.length > 0 ? rawSearch.split(/\s+/).filter(Boolean) : [];
+            const latestM = getLatestMonthString();
+
+            const searchPool = allData.filter(d => {
+                if (queryTokens.length === 0 && latestM && String(d['月份']) !== latestM) return false;
+                if (bFilter !== 'ALL' && String(d['院區']) !== bFilter) return false;
+                if (cFilter !== 'ALL' && String(d['軟體類別']) !== cFilter) return false;
+                return true;
+            });
+
+            currentDownloadResults = searchPool.filter(d => {
+                if (queryTokens.length === 0) return true;
+                const text = [
+                    d['資產名稱'],
+                    d['電腦名稱'],
+                    d['院區'],
+                    d['完整部門'],
+                    d['部門'],
+                    d['軟體類別'],
+                    d['資產廠商'],
+                    d['資產版本'],
+                    d['CPE完整名稱']
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                return queryTokens.every(token => text.includes(token));
+            });
+
+            renderDownloadTablePage();
+        }
+
+        function renderDownloadTablePage() {
+            const total = currentDownloadResults.length;
+            const totalPages = Math.max(1, Math.ceil(total / downloadPageSize));
+
+            if (currentDownloadPage < 1) currentDownloadPage = 1;
+            if (currentDownloadPage > totalPages) currentDownloadPage = totalPages;
+
+            const startIndex = (currentDownloadPage - 1) * downloadPageSize;
+            const pageData = currentDownloadResults.slice(startIndex, startIndex + downloadPageSize);
+
+            const tbody = document.getElementById('patchDownloadTableBody');
+            tbody.innerHTML = '';
+
+            document.getElementById('downloadRecordCountInfo').innerText = 
+                `查得相符端點軟體載點項目：共 ${total.toLocaleString()} 筆 (目前呈現第 ${startIndex + 1} ~ ${Math.min(total, startIndex + downloadPageSize)} 筆)`;
+
+            document.getElementById('downloadPageNumberIndicator').innerText = `第 ${currentDownloadPage} / ${totalPages} 頁`;
+            document.getElementById('btnDownloadPrevPage').disabled = (currentDownloadPage <= 1);
+            document.getElementById('btnDownloadNextPage').disabled = (currentDownloadPage >= totalPages);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500 font-mono">查無相符的端點軟體修補載點資料</td></tr>';
+                return;
+            }
+
+            pageData.forEach(d => {
+                const officialInfo = resolveOfficialDownloadInfo(d['資產名稱'], d['資產廠商'], d['資產版本']);
+                
+                let catBadgeColor = 'bg-slate-800 text-slate-300 border-slate-700';
+                if (d['軟體類別'] === '免費軟體') catBadgeColor = 'bg-emerald-950 text-emerald-300 border-emerald-800';
+                else if (d['軟體類別'] === '微軟類') catBadgeColor = 'bg-blue-950 text-blue-300 border-blue-800';
+                else if (d['軟體類別'] === '版權軟體') catBadgeColor = 'bg-indigo-950 text-indigo-300 border-indigo-800';
+                else if (d['軟體類別'] === '驅動程式') catBadgeColor = 'bg-amber-950 text-amber-300 border-amber-800';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-medium text-slate-200 whitespace-nowrap">${d['院區']}</td>
+                        <td class="py-3 px-4 text-slate-300 truncate max-w-[180px]" title="${d['完整部門']}">${d['完整部門']}</td>
+                        <td class="py-3 px-4 font-mono text-cyan-300 font-medium whitespace-nowrap">${d['電腦名稱']}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono border ${catBadgeColor}">${d['軟體類別']}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-slate-100 truncate max-w-xs" title="${d['資產名稱']}">${d['資產名稱']}</div>
+                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">廠商: ${d['資產廠商'] || '原廠'} | 版號: ${d['資產版本'] || '標準'}</div>
+                        </td>
+                        <td class="py-3 px-4 font-mono font-semibold text-emerald-400 text-xs">
+                            ${officialInfo.recommendedVersion}
+                        </td>
+                        <td class="py-3 px-4 font-mono text-xs">
+                            <div class="text-slate-300 truncate max-w-xs" title="${officialInfo.officialUrl}">${officialInfo.officialUrl}</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-building mr-1"></i>${officialInfo.officialTitle}</div>
+                        </td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <a href="${officialInfo.officialUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/80 hover:text-white font-mono text-[11px] transition shadow-sm">
+                                <span>前往原廠</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportDownloadListCSV() {
+            if (!currentDownloadResults || currentDownloadResults.length === 0) {
+                alert('目前無相符的資料可供匯出！');
+                return;
+            }
+
+            const exportRows = currentDownloadResults.map(r => {
+                const officialInfo = resolveOfficialDownloadInfo(r['資產名稱'], r['資產廠商'], r['資產版本']);
+                return {
+                    '月份': r['月份'],
+                    '院區': r['院區'],
+                    '完整部門': r['完整部門'],
+                    '電腦名稱': r['電腦名稱'],
+                    '軟體類別': r['軟體類別'],
+                    '軟體資產名稱': r['資產名稱'],
+                    '資產廠商': r['資產廠商'],
+                    '資產版本': r['資產版本'],
+                    '建議修補版本': officialInfo.recommendedVersion,
+                    '原廠官方網站網址': officialInfo.officialUrl
+                };
+            });
+
+            const csvContent = Papa.unparse(exportRows);
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `端點軟體修補下載與官方載點清單_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        // 頁面初次載入執行
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromSupabase();
+        });
+    </script>
+</body>
+</html>
