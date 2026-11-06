@@ -134,7 +134,7 @@
 
             <div class="flex items-center space-x-3">
                 <button onclick="loadFromSupabase()" class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-300 bg-slate-900 border border-cyan-500/40 rounded-lg hover:bg-cyan-950/50 hover:border-cyan-400 cursor-pointer shadow-md transition font-mono">
-                    <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 同步資料
+                    <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 重新整理
                 </button>
 
                 <!-- 匯入新月份檔案 -->
@@ -259,7 +259,7 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-indigo-500 rounded-sm mr-2"></span>月份風險指數 1~10 分佈趨勢 (折線圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-indigo-400/80 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">多月趨勢對比</span>
+                                <span class="text-[11px] font-mono text-indigo-400/80 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40" id="lineChartBadge">漸進載入中</span>
                             </div>
                             <p class="text-xs text-slate-400 mb-4">跨月份對比 CVSS 風險分數 1 至 10 之軟體裝機筆數消長</p>
                         </div>
@@ -447,7 +447,7 @@
                             </p>
                         </div>
 
-                        <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 hover:border-rose-500/30 transition">
+                        <div class="bg-slate-900/90 p-4 rounded-xl border border-rose-500/30 transition">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">本月新增弱點軟體</p>
@@ -464,7 +464,7 @@
                             </p>
                         </div>
 
-                        <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 hover:border-emerald-500/30 transition">
+                        <div class="bg-slate-900/90 p-4 rounded-xl border border-emerald-500/30 transition">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">本月修復弱點軟體</p>
@@ -759,7 +759,7 @@
                                 <button onclick="clearDownloadSearch()" id="btnClearDownloadSearch" class="hidden absolute right-2.5 top-1.5 text-slate-400 hover:text-white text-xs">✕</button>
                             </div>
 
-                            <select id="downloadPageSizeSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-mono focus:outline-none" onchange="onDownloadPageSizeChange()">
+                            <select id="downloadPageSizeSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 font-mono focus:outline-none" onchange="onDownloadPageSizeChange()">
                                 <option value="50">每頁 50 筆</option>
                                 <option value="100" selected>每頁 100 筆</option>
                                 <option value="200">每頁 200 筆</option>
@@ -813,7 +813,7 @@
         Chart.register(ChartDataLabels);
 
         // ========================================================
-        // Supabase 資料庫連線配置 (已填入您的專案資訊與 JWT Anon Key)
+        // Supabase 資料庫連線配置
         // ========================================================
         const SUPABASE_PROJECT_URL = 'https://okyavfsdncknmsqzfehj.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reWF2ZnNkbmNrbm1zcXpmZWhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2NzM3MTAsImV4cCI6MjEwOTI0OTcxMH0.CQA6362MxDtAmwPa3m3jdVwcGxzdyWAK_Dm_gM7XRdo';
@@ -831,6 +831,7 @@
 
         let allData = [];
         let newlyImportedRawRows = [];
+        let isBackgroundLoading = false;
 
         // 明細清單分頁與搜尋狀態變數
         let currentPage = 1;
@@ -1114,11 +1115,45 @@
             }
         }
 
-        // 從 Supabase 讀取資料 (加入超時保護)
+        // ========================================================
+        // 核心載入架構：優先載入最新月份，其餘月份背景緩步加載
+        // ========================================================
+        async function fetchMonthBatch(targetMonth, onProgress) {
+            let fetchedRows = [];
+            const fetchBatchSize = 1000;
+            let from = 0;
+            let hasMore = true;
+
+            while (hasMore) {
+                const to = from + fetchBatchSize - 1;
+                let query = supabaseClient.from(SUPABASE_TABLE_NAME).select('*');
+                if (targetMonth) {
+                    query = query.eq('月份', targetMonth);
+                }
+
+                const { data, error } = await query.range(from, to);
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    fetchedRows = fetchedRows.concat(data);
+                    from += fetchBatchSize;
+                    if (onProgress) onProgress(fetchedRows.length);
+                    // 每次微小延遲 80ms 防止觸發 Supabase 500 連線限制
+                    await new Promise(r => setTimeout(r, 80));
+                    if (data.length < fetchBatchSize) hasMore = false;
+                } else {
+                    hasMore = false;
+                }
+
+                if (from >= 120000) break; // 單月上限安全邊界
+            }
+            return fetchedRows;
+        }
+
         async function loadFromSupabase() {
             const syncText = document.getElementById('syncStatus');
             const sideStats = document.getElementById('sidebarStats');
-            syncText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 連線 Supabase 讀取資料中...';
+            syncText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 連線 Supabase 偵測最新月份中...';
 
             if (!supabaseClient) {
                 syncText.innerHTML = '<span class="text-rose-400">⚠️ Supabase SDK 未載入</span>';
@@ -1126,59 +1161,92 @@
                 return;
             }
 
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('連線逾時 (請檢查防火牆或確認網路可否連線 Supabase)')), 10000)
-            );
-
             try {
-                let fetchedRows = [];
-                const fetchBatchSize = 1000;
-                let from = 0;
-                let hasMore = true;
+                // 1. 快速抓取樣本探測資料庫中有哪些月份
+                const { data: monthSample, error: mErr } = await supabaseClient
+                    .from(SUPABASE_TABLE_NAME)
+                    .select('月份')
+                    .limit(3000);
 
-                const fetchTask = async () => {
-                    while (hasMore) {
-                        const to = from + fetchBatchSize - 1;
-                        const { data, error } = await supabaseClient
-                            .from(SUPABASE_TABLE_NAME)
-                            .select('*')
-                            .range(from, to);
+                if (mErr) throw mErr;
 
-                        if (error) throw error;
+                let availableMonths = [...new Set((monthSample || []).map(d => String(d['月份'] || '')).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-                        if (data && data.length > 0) {
-                            fetchedRows = fetchedRows.concat(data);
-                            from += fetchBatchSize;
-                            syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 已讀取 ${fetchedRows.length.toLocaleString()} 筆...`;
-                            if (data.length < fetchBatchSize) hasMore = false;
-                        } else {
-                            hasMore = false;
-                        }
+                const targetLatestMonth = availableMonths.length > 0 ? availableMonths[availableMonths.length - 1] : '';
 
-                        if (from >= 300000) break;
-                    }
-                };
+                // 2. 第一階段：極速優先載入最新月份
+                syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 優先同步最新 ${targetLatestMonth} 月份...`;
+                
+                const latestRows = await fetchMonthBatch(targetLatestMonth, (count) => {
+                    syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 最新 ${targetLatestMonth} 月已載入 ${count.toLocaleString()} 筆...`;
+                });
 
-                await Promise.race([fetchTask(), timeoutPromise]);
-
-                if (fetchedRows.length === 0) {
+                if (latestRows.length === 0) {
                     syncText.innerHTML = '<span class="text-amber-400">⚠️ 資料表為空 (0 筆)</span>';
                     sideStats.innerText = '資料表為空';
                     return;
                 }
 
-                processRows(fetchedRows);
-                syncText.innerHTML = `<span class="text-emerald-400">● Supabase 同步成功 (${allData.length.toLocaleString()} 筆)</span>`;
-                sideStats.innerText = `總載入: ${allData.length.toLocaleString()} 筆`;
+                // 立即渲染最新月份儀表板
+                allData = latestRows.map(r => sanitizeAndMaskRow(r));
+                populateFilters();
+                updateDashboard();
+                runPatchAnalysis();
+
+                syncText.innerHTML = `<span class="text-emerald-400">● 最新 ${targetLatestMonth} 月就緒 (${latestRows.length.toLocaleString()} 筆)</span> <span class="text-xs text-slate-400 font-mono">(背景緩步加載歷史月份中...)</span>`;
+                sideStats.innerText = `最新 ${targetLatestMonth} 月: ${latestRows.length.toLocaleString()} 筆`;
+
+                // 3. 第二階段：背景緩步加載其餘歷史月份
+                const olderMonths = availableMonths.filter(m => m !== targetLatestMonth).reverse();
+                if (olderMonths.length > 0 && !isBackgroundLoading) {
+                    loadRemainingMonthsInBackground(olderMonths, targetLatestMonth);
+                }
+
             } catch (err) {
                 console.error('Supabase 讀取失敗:', err);
                 const msg = err.message || JSON.stringify(err);
-                syncText.innerHTML = `<span class="text-rose-400">⚠️ 連線失敗: ${msg}</span>`;
+                syncText.innerHTML = `<span class="text-rose-400">⚠️ 同步失敗: ${msg}</span>`;
                 sideStats.innerText = '連線異常';
             }
         }
 
-        // 統一資料格式標準化
+        // 背景緩步載入其他月份 (不阻塞首頁操作，平穩加載)
+        async function loadRemainingMonthsInBackground(olderMonths, latestMonth) {
+            isBackgroundLoading = true;
+            const syncText = document.getElementById('syncStatus');
+            const sideStats = document.getElementById('sidebarStats');
+            const lineBadge = document.getElementById('lineChartBadge');
+
+            for (const month of olderMonths) {
+                try {
+                    // 間隔 300ms 再拉取下一個月份，確保不觸發 500
+                    await new Promise(r => setTimeout(r, 300));
+                    
+                    const rows = await fetchMonthBatch(month);
+                    if (rows && rows.length > 0) {
+                        const sanitized = rows.map(r => sanitizeAndMaskRow(r));
+                        allData = allData.concat(sanitized);
+
+                        // 動態更新篩選器與趨勢圖表
+                        populateFilters();
+                        updateCharts(getLatestMonthFilteredData());
+                        runPatchAnalysis();
+
+                        syncText.innerHTML = `<span class="text-emerald-400">● 最新 ${latestMonth} 月就緒</span> <span class="text-xs text-cyan-300 font-mono">(背景已同步 ${month} 月，全院累積 ${allData.length.toLocaleString()} 筆)</span>`;
+                        sideStats.innerText = `全院累積: ${allData.length.toLocaleString()} 筆`;
+                    }
+                } catch (e) {
+                    console.warn(`歷史月份 ${month} 背景加載略過:`, e);
+                }
+            }
+
+            syncText.innerHTML = `<span class="text-emerald-400">● 全月份同步完成 (共 ${allData.length.toLocaleString()} 筆)</span>`;
+            sideStats.innerText = `總載入: ${allData.length.toLocaleString()} 筆記錄`;
+            if (lineBadge) lineBadge.innerText = '全月份趨勢已就緒';
+            isBackgroundLoading = false;
+        }
+
         function processRows(rows) {
             allData = rows.map(r => sanitizeAndMaskRow(r)).filter(r => r.資產名稱);
             populateFilters();
@@ -1212,6 +1280,7 @@
             const latestM = getLatestMonthString();
             document.getElementById('currentDataScopeBadge').innerText = `基準：最新 ${latestM} 月份資料`;
 
+            // 修補分析選單
             const pNew = document.getElementById('patchNewMonth');
             const pOld = document.getElementById('patchOldMonth');
             pNew.innerHTML = months.map(m => `<option value="${m}">${m} 月</option>`).join('');
@@ -1285,6 +1354,7 @@
         }
 
         function updateCharts(latestData) {
+            // 1. 圓餅圖
             const catCounts = {};
             latestData.forEach(d => {
                 const cat = d['軟體類別'] || '未知';
@@ -1325,6 +1395,7 @@
                 }
             });
 
+            // 2. 折線圖 (多月份趨勢，隨背景加載自動豐富)
             const activeMonths = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean)
                 .sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
 
@@ -1383,6 +1454,7 @@
                 }
             });
 
+            // 3. 圓餅圖：各院區弱點數量佔比
             const branchVulnMap = {};
             latestData.forEach(d => {
                 const b = d['院區'] || '未分配';
@@ -1422,6 +1494,7 @@
                 }
             });
 
+            // 4. 橫線圖：高風險軟體 TOP 10
             const highRiskMap = {};
             latestData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => {
                 const sw = d['資產名稱'] || '未知軟體';
@@ -1466,6 +1539,7 @@
                 }
             });
 
+            // 5. 橫線圖：單位弱點值加權排行 TOP 10
             const unitRiskMap = {};
             latestData.forEach(d => {
                 const dept = d['部門'] || '未分配';
@@ -1512,6 +1586,7 @@
                 }
             });
 
+            // 6. 垂直直線圖：各院區設備資產分佈
             const branchCounts = {};
             latestData.forEach(d => {
                 const b = d['院區'] || '未分配';
