@@ -76,6 +76,9 @@
 </head>
 <body class="min-h-screen antialiased flex flex-row">
 
+    <!-- 獨立隱藏式檔案上傳元件 -->
+    <input type="file" id="realFileInput" accept=".csv, .xlsx, .xls" class="hidden" onchange="processImportedFile(this.files[0])">
+
     <!-- 左側邊欄 -->
     <aside class="w-64 border-r border-slate-800/80 bg-slate-950/90 backdrop-blur-md flex flex-col justify-between shrink-0 sticky top-0 h-screen z-50">
         <div>
@@ -135,13 +138,12 @@
                     <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 重新載入數據
                 </button>
 
-                <!-- 匯入新月份檔案 -->
-                <label class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-300 bg-indigo-950/40 border border-indigo-500/40 rounded-lg hover:bg-indigo-950/70 hover:border-indigo-400 cursor-pointer shadow-md transition font-mono" title="支援檔名自動辨識年月">
+                <!-- 點擊觸發上傳按鈕 (100% 穩定響應) -->
+                <button onclick="triggerFileSelect()" class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-300 bg-indigo-950/40 border border-indigo-500/40 rounded-lg hover:bg-indigo-950/70 hover:border-indigo-400 cursor-pointer shadow-md transition font-mono" title="支援檔名自動辨識年月">
                     <i class="fa-solid fa-file-import mr-1 text-indigo-400"></i> 匯入新月份檔案
-                    <input type="file" id="fileUpload" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleFileImport(event)">
-                </label>
+                </button>
 
-                <!-- 一鍵寫入 Turso 資料庫 -->
+                <!-- 寫入雲端資料庫按鈕 (防重寫入) -->
                 <button id="btnPushToCloud" onclick="pushNewRowsToTurso()" class="hidden inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 bg-emerald-950/60 border border-emerald-500/50 rounded-lg hover:bg-emerald-900/60 cursor-pointer shadow-md transition font-mono animate-pulse">
                     <i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 Turso 資料表
                 </button>
@@ -170,7 +172,7 @@
                         <div>
                             <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">1. 選擇月份 (Data Month)</label>
                             <select id="monthFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-cyan-300 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition font-mono" onchange="updateDashboard()">
-                                <option value="LATEST">最新月份</option>
+                                <option value="LATEST">最新月份 (自動切換)</option>
                             </select>
                         </div>
                         <div>
@@ -800,10 +802,10 @@
         Chart.register(ChartDataLabels);
 
         // ========================================================
-        // Turso HTTP 雲端資料庫配置 (更新為您提供的最新 API Token)
+        // Turso HTTP 雲端資料庫配置 (綁定 wm7-wade 與最新 Token)
         // ========================================================
         const TURSO_HTTP_URL = "https://wm7-wade.aws-ap-northeast-1.turso.io/v2/pipeline";
-        const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTQwMTQ4NzIsImlkIjoiMDFhMWIxMmUtMDkwMS03MGIwLWFlMGMtZTJhYWMxNTFkNDE1Iiwia2lkIjoiV2hFZGhJdGh2VXBQSW9vMEhSelJOdHFKRllmNEtuYktkUGZkd3dfSFQ5dyIsInJpZCI6IjgzOTdiYzA1LTZmNDYtNDU4ZS1iZDYzLTUyN2VmZDczOTBkMiJ9.iE2loc_kvrr0bbMf-MH5Oum4cYn_3C3BZ1nzTHhELEG7aNQz3Aqro5DS8D8sWus93BJR2QfsLWF292oesceDDQ";
+        const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJsaXpVb05vX0VmR2RWUHFmQVlPc0xBIiwib3JnX2lkIjoxMDAwMjk1NDkwfQ.-fmMI05SI0LK1zLcdWAsVUi9AnuFOJ7ZUvRgxnEkd1eLWoL0uJngzvFZSv4ecYZZm4kvs8rkRcl5GgqjJQYLBQ";
 
         let allData = [];
         let newlyImportedRawRows = [];
@@ -820,6 +822,15 @@
         let pieChart = null, lineChart = null, branchVulnChart = null, highRiskSwChart = null, unitVulnChart = null, branchBarChart = null;
         let monthlyVulnTrendChart = null, patchCategoryChart = null;
         let cachedDiffSoftwareList = [];
+
+        // 觸發原生檔案選取視窗
+        function triggerFileSelect() {
+            const inputEl = document.getElementById('realFileInput');
+            if (inputEl) {
+                inputEl.value = '';
+                inputEl.click();
+            }
+        }
 
         // 原廠官方網站規則對照庫
         const OFFICIAL_VENDOR_URL_RULES = [
@@ -914,7 +925,7 @@
             return { year: '2026', month: '' };
         }
 
-        // 去識別化遮罩
+        // 醫療院區去識別化遮罩
         function sanitizeAndMaskRow(rawRow, defaultYear, defaultMonth) {
             let month = String(rawRow['月份'] || rawRow.month || defaultMonth || '').trim().replace('月', '');
             let branch = String(rawRow['院區'] || rawRow.branch || '未分配').trim();
@@ -1020,19 +1031,17 @@
             syncText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 連線 Turso 查詢資料庫月份...';
 
             try {
-                // 1. 取得資料庫中存在的所有月份清單
                 const monthRows = await executeTursoSQL('SELECT DISTINCT "月份" FROM endpoint_software_assets ORDER BY CAST("月份" AS INTEGER) ASC;');
                 availableMonthsList = monthRows.map(r => String(r['月份'])).filter(Boolean);
 
                 if (availableMonthsList.length === 0) {
-                    syncText.innerHTML = '<span class="text-amber-400">⚠️ Turso 資料表為空，請執行 Excel 匯入腳本</span>';
+                    syncText.innerHTML = '<span class="text-amber-400">⚠️ Turso 資料表為空，請執行匯入腳本</span>';
                     sideStats.innerText = '資料表為空 (0 筆)';
                     return;
                 }
 
                 allData = [];
 
-                // 2. 依月份逐一載入所有數據
                 for (let i = 0; i < availableMonthsList.length; i++) {
                     const m = availableMonthsList[i];
                     syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 正在載入 ${m} 月份數據 (${i + 1}/${availableMonthsList.length})...`;
@@ -1042,7 +1051,6 @@
                         allData = allData.concat(rows.map(r => sanitizeAndMaskRow(r)));
                     }
 
-                    // 載入第一個月份後立刻顯示畫面，提升體驗
                     if (i === 0) {
                         populateMonthSelector();
                         populateFilters();
@@ -1050,7 +1058,6 @@
                     }
                 }
 
-                // 3. 所有月份載入完成
                 populateMonthSelector();
                 populateFilters();
                 updateDashboard();
@@ -1169,7 +1176,7 @@
                 }
             });
 
-            // 2. 月份風險指數 1~10 分佈趨勢 (多月折線圖)
+            // 2. 月份風險指數 1~10 分佈趨勢
             const riskLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
             const techColors = ['#06b6d4', '#f59e0b', '#10b981', '#f43f5e', '#a855f7', '#38bdf8', '#fb7185'];
 
@@ -1265,7 +1272,7 @@
                 }
             });
 
-            // 4. 高風險軟體分佈 TOP 10 (橫條圖)
+            // 4. 高風險軟體分佈 TOP 10
             const highRiskMap = {};
             currentScopeData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => {
                 const sw = d['資產名稱'] || '未知軟體';
@@ -1310,7 +1317,7 @@
                 }
             });
 
-            // 5. 單位弱點加權排行 TOP 10 (橫條圖)
+            // 5. 單位弱點加權排行 TOP 10
             const unitRiskMap = {};
             currentScopeData.forEach(d => {
                 const dept = d['部門'] || '未分配';
@@ -1357,7 +1364,7 @@
                 }
             });
 
-            // 6. 各院區設備資產分佈 (長條圖)
+            // 6. 各院區設備資產分佈
             const branchCounts = {};
             currentScopeData.forEach(d => {
                 const b = d['院區'] || '未分配';
@@ -1418,7 +1425,6 @@
             branchSelect.value = branches.includes(curB) ? curB : 'ALL';
             categorySelect.value = categories.includes(curC) ? curC : 'ALL';
 
-            // 修補分析選單更新
             const pNew = document.getElementById('patchNewMonth');
             const pOld = document.getElementById('patchOldMonth');
             pNew.innerHTML = availableMonthsList.map(m => `<option value="${m}">${m} 月</option>`).join('');
@@ -1955,6 +1961,160 @@
             link.href = URL.createObjectURL(blob);
             link.download = `端點軟體修補下載與官方載點清單_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
+        }
+
+        // ========================================================
+        // 核心修復：新月份檔案處理 (分離觸發、非同步解析與防呆提示)
+        // ========================================================
+        function processImportedFile(file) {
+            if (!file) return;
+
+            const syncText = document.getElementById('syncStatus');
+            syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> 正在解析檔案：${file.name} ...`;
+
+            const parsedDate = parseYearMonthFromFileName(file.name);
+            let applyMonth = parsedDate.month;
+            
+            if (!applyMonth) {
+                applyMonth = prompt(`系統未能由檔名辨識月份，請輸入該批資料所屬月份 (數字 1~12):`, '10') || '';
+            }
+
+            const fileName = file.name.toLowerCase();
+
+            try {
+                if (fileName.endsWith('.csv')) {
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            handleNewRowsImported(results.data, parsedDate.year, applyMonth, file.name);
+                        },
+                        error: function(err) {
+                            alert(`CSV 讀取失敗: ${err.message}`);
+                            syncText.innerHTML = `<span class="text-rose-400">⚠️ CSV 讀取異常</span>`;
+                        }
+                    });
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        setTimeout(() => {
+                            try {
+                                const data = new Uint8Array(e.target.result);
+                                const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+                                const sheetName = workbook.SheetNames[0];
+                                const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+                                handleNewRowsImported(json, parsedDate.year, applyMonth, file.name);
+                            } catch (readErr) {
+                                console.error("Excel 解析錯誤:", readErr);
+                                alert(`Excel 檔案格式解析錯誤: ${readErr.message}`);
+                                syncText.innerHTML = `<span class="text-rose-400">⚠️ Excel 解析失敗</span>`;
+                            }
+                        }, 50);
+                    };
+                    reader.onerror = function() {
+                        alert("瀏覽器讀取檔案失敗，請確認檔案未被其他程式鎖定！");
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            } catch (e) {
+                console.error("觸發匯入失敗:", e);
+                alert(`處理檔案發生異常: ${e.message}`);
+            }
+        }
+
+        function handleNewRowsImported(rawRows, detectedYear, detectedMonth, originalFileName) {
+            if (!rawRows || rawRows.length === 0) {
+                alert("匯入的檔案無任何有效資料！");
+                return;
+            }
+
+            const sanitizedRows = rawRows.map(r => sanitizeAndMaskRow(r, detectedYear, detectedMonth)).filter(r => r.資產名稱);
+            newlyImportedRawRows = sanitizedRows;
+
+            allData = allData.concat(sanitizedRows);
+            if (detectedMonth && !availableMonthsList.includes(detectedMonth)) {
+                availableMonthsList.push(detectedMonth);
+                availableMonthsList.sort((a,b) => parseInt(a) - parseInt(b));
+            }
+
+            const btnPush = document.getElementById('btnPushToCloud');
+            btnPush.classList.remove('hidden');
+            btnPush.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 ${sanitizedRows.length.toLocaleString()} 筆至 Turso`;
+
+            populateMonthSelector();
+            populateFilters();
+            updateDashboard();
+            runPatchAnalysis();
+
+            alert(`✅ 檔案【${originalFileName}】解析成功！\n• 辨識月份：${detectedMonth || '依各列設定'} 月\n• 清洗與去識別化：共 ${sanitizedRows.length.toLocaleString()} 筆\n\n已即時呈現在儀表板！若要永久儲存，請點擊頂部綠色按鈕寫入 Turso 資料庫。`);
+        }
+
+        // 寫入 Turso 資料庫 (使用 INSERT OR IGNORE 防止重複寫入)
+        async function pushNewRowsToTurso() {
+            if (!newlyImportedRawRows || newlyImportedRawRows.length === 0) return;
+
+            const btnPush = document.getElementById('btnPushToCloud');
+            btnPush.disabled = true;
+            btnPush.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 寫入中...';
+
+            const INSERT_SQL = `
+            INSERT OR IGNORE INTO endpoint_software_assets (
+                "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
+                "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
+                "CVE風險指數(3.x)", "CVE弱點數量"
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
+            `;
+
+            try {
+                const batchSize = 500;
+                const total = newlyImportedRawRows.length;
+                for (let i = 0; i < total; i += batchSize) {
+                    const batch = newlyImportedRawRows.slice(i, i + batchSize);
+                    const requests = batch.map(r => ({
+                        type: 'execute',
+                        stmt: {
+                            sql: INSERT_SQL,
+                            args: [
+                                { type: 'text', value: String(r['月份']) },
+                                { type: 'text', value: String(r['電腦名稱']) },
+                                { type: 'text', value: String(r['院區']) },
+                                { type: 'text', value: String(r['完整部門']) },
+                                { type: 'text', value: String(r['IP位址']) },
+                                { type: 'text', value: String(r['軟體類別']) },
+                                { type: 'text', value: String(r['資產名稱']) },
+                                { type: 'text', value: String(r['資產廠商']) },
+                                { type: 'text', value: String(r['資產版本']) },
+                                { type: 'text', value: String(r['CPE 2.3']) },
+                                { type: 'text', value: String(r['CPE完整名稱']) },
+                                { type: 'text', value: String(parseFloat(r['CVE風險指數(2.0)'] || 0)) },
+                                { type: 'text', value: String(parseFloat(r['CVE風險指數(3.x)'] || 0)) },
+                                { type: 'text', value: String(parseInt(r['CVE弱點數量'] || 0, 10)) }
+                            ]
+                        }
+                    }));
+
+                    const resp = await fetch(TURSO_HTTP_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${TURSO_AUTH_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ requests: requests.concat([{ type: 'close' }]) })
+                    });
+
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    btnPush.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 已寫入 ${Math.min(i + batchSize, total).toLocaleString()} / ${total.toLocaleString()}`;
+                }
+
+                alert(`🎉 成功同步至 Turso 資料庫！已自動排查並過濾重覆項目。`);
+                btnPush.classList.add('hidden');
+                newlyImportedRawRows = [];
+                loadFromTurso();
+            } catch (err) {
+                alert(`寫入 Turso 失敗: ${err.message}`);
+            } finally {
+                btnPush.disabled = false;
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
