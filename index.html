@@ -580,38 +580,41 @@
             return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // 登入送出
-        async function onLoginFormSubmit(event) {
-            event.preventDefault();
-            const u = document.getElementById('loginUsername').value.trim();
-            const p = document.getElementById('loginPassword').value.trim();
-            const btn = document.getElementById('btnLoginSubmit');
+    // 登入送出 (帳號不分大小寫)
+async function onLoginFormSubmit(event) {
+    event.preventDefault();
+    // 關鍵：將使用者輸入的帳號強制轉為小寫並去除前後空白
+    const u = document.getElementById('loginUsername').value.trim().toLowerCase();
+    const p = document.getElementById('loginPassword').value.trim();
+    const btn = document.getElementById('btnLoginSubmit');
 
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 驗證身分中...';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 驗證身分中...';
 
-            try {
-                const pHash = await hashPassword(p);
-                const rows = await executeTursoSQL(
-                    'SELECT username, display_name, role, company_name, org_type, scope_unit, unit_label FROM sys_users WHERE username = ? AND password_hash = ?;',
-                    [u, pHash]
-                );
+    try {
+        const pHash = await hashPassword(p);
+        // 使用 LOWER(username) = ? 進行資料庫比對，不分大小寫
+        const rows = await executeTursoSQL(
+            'SELECT username, display_name, role, company_name, org_type, scope_unit, unit_label FROM sys_users WHERE LOWER(username) = ? AND password_hash = ?;',
+            [u, pHash]
+        );
 
-                if (rows && rows.length > 0) {
-                    currentUser = rows[0];
-                    sessionStorage.setItem('tpech_auth_user', JSON.stringify(currentUser));
-                    document.getElementById('loginModal').classList.add('hidden');
-                    applyUserPermissions();
-                    loadFromTurso();
-                } else {
-                    alert('❌ 帳號或密碼錯誤，請重新確認！');
-                }
-            } catch (err) {
-                alert(`登入驗證異常: ${err.message}`);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = '登入系統';
-            }
+        if (rows && rows.length > 0) {
+            currentUser = rows[0];
+            sessionStorage.setItem('tpech_auth_user', JSON.stringify(currentUser));
+            document.getElementById('loginModal').classList.add('hidden');
+            applyUserPermissions();
+            loadFromTurso();
+        } else {
+            alert('❌ 帳號或密碼錯誤，請重新確認！');
+        }
+    } catch (err) {
+        alert(`登入驗證異常: ${err.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '登入系統';
+    }
+
         }
 
         function handleLogout() {
