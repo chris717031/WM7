@@ -460,7 +460,7 @@
         </main>
     </div>
 
-    <!-- ================= 登入驗證視窗 (強制攔截) ================= -->
+    <!-- ================= 登入驗證視窗 (清空提示與停用自動代入) ================= -->
     <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
         <div class="glass-card rounded-2xl p-8 max-w-sm w-full mx-4 border border-cyan-500/40 shadow-2xl">
             <div class="text-center mb-6">
@@ -470,24 +470,25 @@
                 <h2 class="text-lg font-bold text-slate-100">端點資安戰情中心</h2>
                 <p class="text-xs text-slate-400 font-mono mt-1">請登入您的授權帳號</p>
             </div>
-            <form onsubmit="onLoginFormSubmit(event)" class="space-y-4">
+            <form onsubmit="onLoginFormSubmit(event)" class="space-y-4" autocomplete="off">
+                <!-- 虛擬隱藏輸入欄位，避免特定瀏覽器強制將儲存的密碼注入第一個輸入框 -->
+                <input type="text" style="display:none">
+                <input type="password" style="display:none">
+
                 <div>
                     <label class="block text-xs font-mono text-slate-300 mb-1.5">使用者帳號</label>
-                    <input type="text" id="loginUsername" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono" placeholder="請輸入帳號">
+                    <input type="text" id="loginUsername" required autocomplete="off" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono" placeholder="請輸入帳號" value="">
                 </div>
                 <div>
                     <label class="block text-xs font-mono text-slate-300 mb-1.5">登入密碼</label>
-                    <input type="password" id="loginPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono" placeholder="請輸入密碼">
+                    <input type="password" id="loginPassword" required autocomplete="new-password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono" placeholder="請輸入密碼" value="">
                 </div>
                 <button type="submit" id="btnLoginSubmit" class="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold font-mono tracking-wider transition shadow-lg shadow-cyan-500/20">
                     登入系統
                 </button>
             </form>
-            <div class="mt-4 pt-3 border-t border-slate-800/80 text-[10px] text-slate-500 font-mono text-center space-y-1">
-                <div>預設管理者: admin / 密碼: admin123</div>
-                <div>聯醫院區範例: user_renai / 密碼: tpech123</div>
-            </div>
         </div>
+      </div>
     </div>
 
     <!-- ================= 管理員功能：建立新帳號 Modal ================= -->
@@ -1452,8 +1453,13 @@ async function onLoginFormSubmit(event) {
             else if (tabId === 'patch') runPatchAnalysis();
         }
 
-        // 頁面載入時檢查 Session
-        window.addEventListener('DOMContentLoaded', () => {
+      window.addEventListener('DOMContentLoaded', () => {
+            // 強制清空輸入框，防止瀏覽器快取自動填充
+            const uInput = document.getElementById('loginUsername');
+            const pInput = document.getElementById('loginPassword');
+            if (uInput) uInput.value = '';
+            if (pInput) pInput.value = '';
+
             const saved = sessionStorage.getItem('tpech_auth_user');
             if (saved) {
                 try {
