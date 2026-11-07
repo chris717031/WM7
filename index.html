@@ -132,7 +132,7 @@
 
             <div class="flex items-center space-x-3">
                 <button onclick="loadFromTurso()" class="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-300 bg-slate-900 border border-cyan-500/40 rounded-lg hover:bg-cyan-950/50 hover:border-cyan-400 cursor-pointer shadow-md transition font-mono">
-                    <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 重新整理
+                    <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 重新載入數據
                 </button>
 
                 <!-- 匯入新月份檔案 -->
@@ -166,21 +166,27 @@
                         <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-cyan-400 font-mono transition">重設篩選條件 ↺</button>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         <div>
-                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">1. 選擇院區 (Hospital Branch)</label>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">1. 選擇月份 (Data Month)</label>
+                            <select id="monthFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-cyan-300 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition font-mono" onchange="updateDashboard()">
+                                <option value="LATEST">最新月份</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">2. 選擇院區 (Hospital Branch)</label>
                             <select id="branchFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition" onchange="updateDashboard()">
                                 <option value="ALL">全部院區 (All Branches)</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">2. 軟體類別 (Software Category)</label>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">3. 軟體類別 (Software Category)</label>
                             <select id="categoryFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition" onchange="updateDashboard()">
                                 <option value="ALL">全部類別 (All Categories)</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">3. CVE 風險等級 (Risk Level)</label>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">4. CVE 風險等級 (Risk Level)</label>
                             <select id="riskFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition font-mono" onchange="updateDashboard()">
                                 <option value="ALL">全部風險等級 (All Levels)</option>
                                 <option value="NONE">風險值 0，無風險</option>
@@ -198,36 +204,36 @@
                     <div class="glass-card rounded-2xl p-6 relative overflow-hidden group">
                         <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition duration-500"></div>
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">弱點軟體筆數 (當期)</span>
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">弱點軟體筆數</span>
                             <span class="p-2 rounded-lg bg-rose-950/60 border border-rose-800/40 text-rose-400"><i class="fa-solid fa-triangle-exclamation"></i></span>
                         </div>
                         <h3 id="kpiVulnRecords" class="text-3xl font-extrabold text-rose-400 font-mono mt-3">0</h3>
                         <p class="text-xs text-slate-400 mt-2 flex items-center">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 mr-2"></span>最新月份存在弱點之裝機記錄
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 mr-2"></span>當期存在弱點之裝機記錄
                         </p>
                     </div>
 
                     <div class="glass-card rounded-2xl p-6 relative overflow-hidden group">
                         <div class="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition duration-500"></div>
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">管理電腦總數 (當期)</span>
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">管理電腦總數</span>
                             <span class="p-2 rounded-lg bg-cyan-950/60 border border-cyan-800/40 text-cyan-400"><i class="fa-solid fa-desktop"></i></span>
                         </div>
                         <h3 id="kpiUniqueComputers" class="text-3xl font-extrabold text-cyan-300 font-mono mt-3">0</h3>
                         <p class="text-xs text-slate-400 mt-2 flex items-center">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 mr-2"></span>最新月份納管獨立端點設備
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 mr-2"></span>當期納管獨立端點設備
                         </p>
                     </div>
 
                     <div class="glass-card rounded-2xl p-6 relative overflow-hidden group">
                         <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition duration-500"></div>
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">總弱點數量 (當期)</span>
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">總弱點數量</span>
                             <span class="p-2 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"><i class="fa-solid fa-shield-virus"></i></span>
                         </div>
                         <h3 id="kpiTotalVuln" class="text-3xl font-extrabold text-indigo-300 font-mono mt-3">0</h3>
                         <p class="text-xs text-slate-400 mt-2 flex items-center">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></span>最新月份累計 CVE 弱點總數
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></span>當期累計 CVE 弱點總數
                         </p>
                     </div>
                 </div>
@@ -240,9 +246,9 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-cyan-500 rounded-sm mr-2"></span>軟體類別分佈 (圓餅圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-cyan-400/80 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40" id="pieChartBadge">最新月份標註</span>
+                                <span class="text-[11px] font-mono text-cyan-400/80 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40" id="pieChartBadge">當前月份分佈</span>
                             </div>
-                            <p class="text-xs text-slate-400 mb-4">最新月份全院授權與形態分類之裝機佔比</p>
+                            <p class="text-xs text-slate-400 mb-4">所選月份全院授權與形態分類之裝機佔比</p>
                         </div>
                         <div class="relative h-80 flex justify-center items-center">
                             <canvas id="pieChart"></canvas>
@@ -255,7 +261,7 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-indigo-500 rounded-sm mr-2"></span>月份風險指數 1~10 分佈趨勢 (折線圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-indigo-400/80 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40" id="lineChartBadge">漸進載入中</span>
+                                <span class="text-[11px] font-mono text-indigo-400/80 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40" id="lineChartBadge">跨月份多月趨勢</span>
                             </div>
                             <p class="text-xs text-slate-400 mb-4">跨月份對比 CVSS 風險分數 1 至 10 之軟體裝機筆數消長</p>
                         </div>
@@ -273,9 +279,9 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-rose-500 rounded-sm mr-2"></span>各院區弱點數量佔比 (圓餅圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-rose-400/80 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">最新月份佔比</span>
+                                <span class="text-[11px] font-mono text-rose-400/80 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-800/40">各院區弱點分佈</span>
                             </div>
-                            <p class="text-xs text-slate-400 mb-4">最新月份各院區端點設備累計 CVE 弱點數佔比</p>
+                            <p class="text-xs text-slate-400 mb-4">所選月份各院區端點設備累計 CVE 弱點數佔比</p>
                         </div>
                         <div class="relative h-80 flex justify-center items-center">
                             <canvas id="branchVulnChart"></canvas>
@@ -288,9 +294,9 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-amber-500 rounded-sm mr-2"></span>高風險軟體分佈 TOP 10 (橫線圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-amber-400/80 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">最新月份排名</span>
+                                <span class="text-[11px] font-mono text-amber-400/80 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">高危裝機排名</span>
                             </div>
-                            <p class="text-xs text-slate-400 mb-4">最新月份高風險等級 (CVSS 7~10) 裝機量最多之軟體</p>
+                            <p class="text-xs text-slate-400 mb-4">高風險等級 (CVSS 7~10) 裝機量最多之軟體</p>
                         </div>
                         <div class="relative h-80">
                             <canvas id="highRiskSwChart"></canvas>
@@ -306,9 +312,9 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-purple-500 rounded-sm mr-2"></span>單位弱點值加權累積排行 TOP 10 (橫線圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-purple-400/80 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-800/40">最新月份加權</span>
+                                <span class="text-[11px] font-mono text-purple-400/80 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-800/40">單位風險加權</span>
                             </div>
-                            <p class="text-xs text-slate-400 mb-4">最新月份各部門端點軟體之 CVSS 風險指數加權總和排行</p>
+                            <p class="text-xs text-slate-400 mb-4">各部門端點軟體之 CVSS 風險指數加權總和排行</p>
                         </div>
                         <div class="relative h-80">
                             <canvas id="unitVulnChart"></canvas>
@@ -321,9 +327,9 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-sky-500 rounded-sm mr-2"></span>各院區設備資產分佈 (垂直直線圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-sky-400/80 bg-sky-950/40 px-2 py-0.5 rounded border border-sky-800/40">最新月份裝機量</span>
+                                <span class="text-[11px] font-mono text-sky-400/80 bg-sky-950/40 px-2 py-0.5 rounded border border-sky-800/40">院區裝機規模</span>
                             </div>
-                            <p class="text-xs text-slate-400 mb-4">最新月份各院區端點設備軟體裝機筆數分佈</p>
+                            <p class="text-xs text-slate-400 mb-4">所選月份各院區端點設備軟體裝機筆數分佈</p>
                         </div>
                         <div class="relative h-80">
                             <canvas id="branchBarChart"></canvas>
@@ -340,10 +346,10 @@
                                     <span class="w-1.5 h-4 bg-emerald-500 rounded-sm mr-2"></span>軟體弱點與端點明細清單
                                 </h3>
                                 <span id="tableScopeBadge" class="px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-emerald-950 text-emerald-400 border border-emerald-800/50">
-                                    <i class="fa-solid fa-layer-group mr-1 text-[9px]"></i>最新月份基準 (支援全域跨月檢索)
+                                    <i class="fa-solid fa-layer-group mr-1 text-[9px]"></i>載入完成
                                 </span>
                             </div>
-                            <p class="text-xs text-slate-400 mt-0.5">預設呈現最新月份；輸入關鍵字將**全域檢索所有月份軟體**（如 7-zip、Adobe、Firefox 等皆可查出）</p>
+                            <p class="text-xs text-slate-400 mt-0.5">預設呈現所選月份；輸入關鍵字將**全域跨月檢索所有軟體**（如 7-zip、Adobe、Firefox 等皆可查出）</p>
                         </div>
 
                         <div class="flex items-center flex-wrap gap-2.5 w-full sm:w-auto">
@@ -422,7 +428,6 @@
                         </div>
                     </div>
 
-                    <!-- 5 大情境 KPI -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 hover:border-slate-600 transition">
                             <div class="flex items-center justify-between">
@@ -504,7 +509,6 @@
                         </div>
                     </div>
 
-                    <!-- 圖表區 -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                         <div class="bg-slate-900/80 p-6 rounded-xl border border-slate-800 lg:col-span-2 flex flex-col justify-between">
                             <div class="flex justify-between items-center mb-4">
@@ -542,7 +546,6 @@
                         </div>
                     </div>
 
-                    <!-- 重點弱點明細表 -->
                     <div class="bg-slate-900/90 rounded-xl border border-slate-800 overflow-hidden">
                         <div class="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
@@ -601,7 +604,7 @@
                         <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
                             <div class="text-slate-400 mb-1">全院端點納管規模</div>
                             <div class="text-xl font-bold text-cyan-400" id="recomTotalAssets">7,509 台電腦</div>
-                            <div class="text-slate-500 mt-1">跨院區常態監控，資料庫累積 14.5 萬筆軟體資產記錄</div>
+                            <div class="text-slate-500 mt-1">跨院區常態監控，資料庫累積軟體資產記錄</div>
                         </div>
                         <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
                             <div class="text-slate-400 mb-1">高危風險暴露佔比 (CVSS ≥ 7)</div>
@@ -641,7 +644,7 @@
                                 <h4 class="font-bold text-sm text-slate-100 mb-2">高危通用軟體自動派送更新</h4>
                                 <p class="text-slate-400 text-xs leading-relaxed">
                                     <strong>處置標的：</strong>7-Zip、Google Chrome、Microsoft Edge 等非業務綁定工具。<br>
-                                    <strong>修補手段：</strong>利用神旺端點管理系統或 WSUS 於夜間離峰時段實施靜默批次更新，目標快速收斂 65% 以上已知 CVE。
+                                    <strong>修補手段：</strong>利用端點管理系統或 WSUS 於夜間離峰時段實施靜默批次更新，目標快速收斂 65% 以上已知 CVE。
                                 </p>
                             </div>
                             <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] font-mono text-emerald-400">
@@ -731,7 +734,6 @@
                             </div>
                         </div>
 
-                        <!-- 篩選、搜尋與每頁筆數控制 -->
                         <div class="flex items-center flex-wrap gap-2.5 font-mono text-xs">
                             <select id="downloadBranchFilter" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none focus:ring-1 focus:ring-cyan-500" onchange="onDownloadFilterChange()">
                                 <option value="ALL">全部院區</option>
@@ -758,7 +760,6 @@
                         </div>
                     </div>
 
-                    <!-- 官方載點列表 -->
                     <div class="overflow-x-auto rounded-xl border border-slate-800/80 max-h-[560px]">
                         <table class="w-full text-left border-collapse text-xs font-sans">
                             <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 font-mono text-slate-400 border-b border-slate-800">
@@ -777,7 +778,6 @@
                         </table>
                     </div>
 
-                    <!-- 分頁控制導航 -->
                     <div class="flex flex-col sm:flex-row justify-between items-center mt-3 pt-3 border-t border-slate-800 text-xs font-mono text-slate-400 gap-3">
                         <div id="downloadRecordCountInfo">顯示中...</div>
                         <div class="flex items-center space-x-2" id="downloadPaginationControls">
@@ -800,14 +800,14 @@
         Chart.register(ChartDataLabels);
 
         // ========================================================
-        // Turso HTTP 雲端資料庫配置 (已綁定 wm7-wade 與新 Token)
+        // Turso HTTP 雲端資料庫配置 (更新為您提供的最新 API Token)
         // ========================================================
         const TURSO_HTTP_URL = "https://wm7-wade.aws-ap-northeast-1.turso.io/v2/pipeline";
-        const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM5NzY1NzEsImlkIjoiMDFhMWIxMmUtMDkwMS03MGIwLWFlMGMtZTJhYWMxNTFkNDE1Iiwia2lkIjoiV2hFZGhJdGh2VXBQSW9vMEhSelJOdHFKRllmNEtuYktkUGZkd3dfSFQ5dyIsInJpZCI6IjgzOTdiYzA1LTZmNDYtNDU4ZS1iZDYzLTUyN2VmZDczOTBkMiJ9.658zdTfI7o24Lm40Fj92bpP8M7IclJzFiRtyM3kI0F-IfLvTG3p7uI1HENIJWv7fwPn9hBwaoQ3GZO3RrxWgDQ";
+        const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJsaXpVb05vX0VmR2RWUHFmQVlPc0xBIiwib3JnX2lkIjoxMDAwMjk1NDkwfQ.-fmMI05SI0LK1zLcdWAsVUi9AnuFOJ7ZUvRgxnEkd1eLWoL0uJngzvFZSv4ecYZZm4kvs8rkRcl5GgqjJQYLBQ";
 
         let allData = [];
         let newlyImportedRawRows = [];
-        let isBackgroundLoading = false;
+        let availableMonthsList = [];
 
         let currentPage = 1;
         let pageSize = 100;
@@ -914,7 +914,7 @@
             return { year: '2026', month: '' };
         }
 
-        // 依現有資料格式進行清洗、去識別化遮罩與欄位編修
+        // 去識別化遮罩
         function sanitizeAndMaskRow(rawRow, defaultYear, defaultMonth) {
             let month = String(rawRow['月份'] || rawRow.month || defaultMonth || '').trim().replace('月', '');
             let branch = String(rawRow['院區'] || rawRow.branch || '未分配').trim();
@@ -1011,45 +1011,53 @@
             });
         }
 
-        // 核心同步：優先秒開最新月份，歷史月份背景加載
+        // ========================================================
+        // 核心同步：逐月平穩載入全月份數據
+        // ========================================================
         async function loadFromTurso() {
             const syncText = document.getElementById('syncStatus');
             const sideStats = document.getElementById('sidebarStats');
-            syncText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 連線 Turso 雲端資料庫...';
+            syncText.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 連線 Turso 查詢資料庫月份...';
 
             try {
-                // 1. 查詢所有月份
-                const monthRows = await executeTursoSQL('SELECT DISTINCT "月份" FROM endpoint_software_assets ORDER BY "月份" ASC;');
-                const availableMonths = monthRows.map(r => String(r['月份'])).filter(Boolean);
+                // 1. 取得資料庫中存在的所有月份清單
+                const monthRows = await executeTursoSQL('SELECT DISTINCT "月份" FROM endpoint_software_assets ORDER BY CAST("月份" AS INTEGER) ASC;');
+                availableMonthsList = monthRows.map(r => String(r['月份'])).filter(Boolean);
 
-                if (availableMonths.length === 0) {
-                    syncText.innerHTML = '<span class="text-amber-400">⚠️ Turso 資料表目前為空，請執行匯入腳本</span>';
+                if (availableMonthsList.length === 0) {
+                    syncText.innerHTML = '<span class="text-amber-400">⚠️ Turso 資料表為空，請執行 Excel 匯入腳本</span>';
                     sideStats.innerText = '資料表為空 (0 筆)';
                     return;
                 }
 
-                const latestMonth = availableMonths[availableMonths.length - 1];
-                syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 優先同步最新 ${latestMonth} 月份...`;
+                allData = [];
 
-                // 2. 秒開最新月份
-                const latestRows = await executeTursoSQL(
-                    'SELECT * FROM endpoint_software_assets WHERE "月份" = ?;',
-                    [latestMonth]
-                );
+                // 2. 依月份逐一載入所有數據
+                for (let i = 0; i < availableMonthsList.length; i++) {
+                    const m = availableMonthsList[i];
+                    syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 正在載入 ${m} 月份數據 (${i + 1}/${availableMonthsList.length})...`;
+                    
+                    const rows = await executeTursoSQL('SELECT * FROM endpoint_software_assets WHERE "月份" = ?;', [m]);
+                    if (rows && rows.length > 0) {
+                        allData = allData.concat(rows.map(r => sanitizeAndMaskRow(r)));
+                    }
 
-                allData = latestRows.map(r => sanitizeAndMaskRow(r));
+                    // 載入第一個月份後立刻顯示畫面，提升體驗
+                    if (i === 0) {
+                        populateMonthSelector();
+                        populateFilters();
+                        updateDashboard();
+                    }
+                }
+
+                // 3. 所有月份載入完成
+                populateMonthSelector();
                 populateFilters();
                 updateDashboard();
                 runPatchAnalysis();
 
-                syncText.innerHTML = `<span class="text-emerald-400">● 最新 ${latestMonth} 月就緒 (${latestRows.length.toLocaleString()} 筆)</span> <span class="text-xs text-slate-400 font-mono">(背景加載歷史中...)</span>`;
-                sideStats.innerText = `最新 ${latestMonth} 月: ${latestRows.length.toLocaleString()} 筆`;
-
-                // 3. 背景緩步加載其餘月份
-                const olderMonths = availableMonths.filter(m => m !== latestMonth).reverse();
-                if (olderMonths.length > 0 && !isBackgroundLoading) {
-                    loadOlderMonthsInBackground(olderMonths, latestMonth);
-                }
+                syncText.innerHTML = `<span class="text-emerald-400">● 全月份同步就緒 (共 ${allData.length.toLocaleString()} 筆)</span>`;
+                sideStats.innerText = `全院總量: ${allData.length.toLocaleString()} 筆`;
 
             } catch (err) {
                 console.error('Turso 同步失敗:', err);
@@ -1058,220 +1066,39 @@
             }
         }
 
-        async function loadOlderMonthsInBackground(olderMonths, latestMonth) {
-            isBackgroundLoading = true;
-            const syncText = document.getElementById('syncStatus');
-            const sideStats = document.getElementById('sidebarStats');
+        function populateMonthSelector() {
+            const monthSel = document.getElementById('monthFilter');
+            const currentSelected = monthSel.value;
+            
+            let html = '<option value="LATEST">最新月份 (自動切換)</option>';
+            availableMonthsList.forEach(m => {
+                html += `<option value="${m}">${m} 月份</option>`;
+            });
+            monthSel.innerHTML = html;
 
-            for (const m of olderMonths) {
-                try {
-                    await new Promise(r => setTimeout(r, 120));
-                    const rows = await executeTursoSQL('SELECT * FROM endpoint_software_assets WHERE "月份" = ?;', [m]);
-                    if (rows && rows.length > 0) {
-                        allData = allData.concat(rows.map(r => sanitizeAndMaskRow(r)));
-                        populateFilters();
-                        updateCharts(getLatestMonthFilteredData());
-                        runPatchAnalysis();
-                        syncText.innerHTML = `<span class="text-emerald-400">● 最新 ${latestMonth} 月就緒</span> <span class="text-xs text-cyan-300 font-mono">(已同步 ${m} 月，累積 ${allData.length.toLocaleString()} 筆)</span>`;
-                        sideStats.innerText = `全院累積: ${allData.length.toLocaleString()} 筆`;
-                    }
-                } catch (e) {
-                    console.warn(`加載 ${m} 月略過:`, e);
-                }
-            }
-            syncText.innerHTML = `<span class="text-emerald-400">● Turso 全量同步完成 (共 ${allData.length.toLocaleString()} 筆)</span>`;
-            isBackgroundLoading = false;
-        }
-
-        // 匯入新月份檔案
-        function handleFileImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const syncText = document.getElementById('syncStatus');
-            syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> 解析檔案 ${file.name}...`;
-
-            const parsedDate = parseYearMonthFromFileName(file.name);
-            let applyMonth = parsedDate.month;
-            if (!parsedDate.month) {
-                const userPrompt = prompt(`未能由檔名精確判定月份，請輸入該批資料所屬月份 (數字 1~12):`, '10');
-                if (userPrompt) applyMonth = String(parseInt(userPrompt, 10));
-            }
-
-            const fileName = file.name.toLowerCase();
-            if (fileName.endsWith('.csv')) {
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        handleNewRowsImported(results.data, parsedDate.year, applyMonth, file.name);
-                    }
-                });
+            if (currentSelected && (currentSelected === 'LATEST' || availableMonthsList.includes(currentSelected))) {
+                monthSel.value = currentSelected;
             } else {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                    handleNewRowsImported(json, parsedDate.year, applyMonth, file.name);
-                };
-                reader.readAsArrayBuffer(file);
-            }
-            event.target.value = '';
-        }
-
-        function handleNewRowsImported(rawRows, detectedYear, detectedMonth, originalFileName) {
-            const sanitizedRows = rawRows.map(r => sanitizeAndMaskRow(r, detectedYear, detectedMonth)).filter(r => r.資產名稱);
-            newlyImportedRawRows = sanitizedRows;
-            allData = allData.concat(sanitizedRows);
-
-            const btnPush = document.getElementById('btnPushToCloud');
-            btnPush.classList.remove('hidden');
-            btnPush.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 ${sanitizedRows.length.toLocaleString()} 筆至 Turso`;
-
-            alert(`✅ 檔案【${originalFileName}】解析完成！\n• 辨識月份：${detectedMonth || '依各列原定'} 月\n• 去識別化及欄位編修完成：共 ${sanitizedRows.length.toLocaleString()} 筆\n\n您可以點擊頂端綠色按鈕將此批新資料寫入 Turso 資料庫。`);
-            populateFilters();
-            updateDashboard();
-            runPatchAnalysis();
-        }
-
-        async function pushNewRowsToTurso() {
-            if (!newlyImportedRawRows || newlyImportedRawRows.length === 0) return;
-
-            const btnPush = document.getElementById('btnPushToCloud');
-            btnPush.disabled = true;
-            btnPush.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 寫入中...';
-
-            const INSERT_SQL = `
-            INSERT INTO endpoint_software_assets (
-                "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
-                "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
-                "CVE風險指數(3.x)", "CVE弱點數量"
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            `;
-
-            try {
-                const batchSize = 500;
-                for (let i = 0; i < newlyImportedRawRows.length; i += batchSize) {
-                    const batch = newlyImportedRawRows.slice(i, i + batchSize);
-                    const requests = batch.map(r => ({
-                        type: 'execute',
-                        stmt: {
-                            sql: INSERT_SQL,
-                            args: [
-                                { type: 'text', value: String(r['月份']) },
-                                { type: 'text', value: String(r['電腦名稱']) },
-                                { type: 'text', value: String(r['院區']) },
-                                { type: 'text', value: String(r['完整部門']) },
-                                { type: 'text', value: String(r['IP位址']) },
-                                { type: 'text', value: String(r['軟體類別']) },
-                                { type: 'text', value: String(r['資產名稱']) },
-                                { type: 'text', value: String(r['資產廠商']) },
-                                { type: 'text', value: String(r['資產版本']) },
-                                { type: 'text', value: String(r['CPE 2.3']) },
-                                { type: 'text', value: String(r['CPE完整名稱']) },
-                                { type: 'float', value: parseFloat(r['CVE風險指數(2.0)'] || 0) },
-                                { type: 'float', value: parseFloat(r['CVE風險指數(3.x)'] || 0) },
-                                { type: 'integer', value: parseInt(r['CVE弱點數量'] || 0, 10) }
-                            ]
-                        }
-                    }));
-
-                    await fetch(TURSO_HTTP_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${TURSO_AUTH_TOKEN}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ requests: requests.concat([{ type: 'close' }]) })
-                    });
-                }
-
-                alert(`🎉 成功寫入 ${newlyImportedRawRows.length.toLocaleString()} 筆資料至 Turso 資料庫！`);
-                btnPush.classList.add('hidden');
-                newlyImportedRawRows = [];
-            } catch (err) {
-                alert(`寫入失敗: ${err.message}`);
-            } finally {
-                btnPush.disabled = false;
+                monthSel.value = 'LATEST';
             }
         }
 
-        function getLatestMonthString() {
-            const months = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean)
-                .sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
-            return months.length > 0 ? months[months.length - 1] : '';
-        }
-
-        function populateFilters() {
-            const branches = [...new Set(allData.map(d => String(d['院區'])))].filter(Boolean).sort();
-            const categories = [...new Set(allData.map(d => String(d['軟體類別'])))].filter(Boolean).sort();
-            const months = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
-
-            const branchSelect = document.getElementById('branchFilter');
-            const categorySelect = document.getElementById('categoryFilter');
-
-            const curB = branchSelect.value;
-            const curC = categorySelect.value;
-
-            branchSelect.innerHTML = '<option value="ALL">全部院區 (All Branches)</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
-            categorySelect.innerHTML = '<option value="ALL">全部類別 (All Categories)</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
-
-            branchSelect.value = branches.includes(curB) ? curB : 'ALL';
-            categorySelect.value = categories.includes(curC) ? curC : 'ALL';
-
-            const latestM = getLatestMonthString();
-            document.getElementById('currentDataScopeBadge').innerText = `基準：最新 ${latestM} 月份資料`;
-
-            const pNew = document.getElementById('patchNewMonth');
-            const pOld = document.getElementById('patchOldMonth');
-            pNew.innerHTML = months.map(m => `<option value="${m}">${m} 月</option>`).join('');
-            pOld.innerHTML = months.map(m => `<option value="${m}">${m} 月</option>`).join('');
-
-            if (months.length >= 2) {
-                pNew.value = months[months.length - 1];
-                pOld.value = months[months.length - 2];
-            } else if (months.length === 1) {
-                pNew.value = months[0];
-                pOld.value = months[0];
+        function getActiveSelectedMonth() {
+            const sel = document.getElementById('monthFilter').value;
+            if (sel === 'LATEST') {
+                return availableMonthsList.length > 0 ? availableMonthsList[availableMonthsList.length - 1] : '';
             }
+            return sel;
         }
 
-        function resetFilters() {
-            document.getElementById('branchFilter').value = 'ALL';
-            document.getElementById('categoryFilter').value = 'ALL';
-            document.getElementById('riskFilter').value = 'ALL';
-            clearSearch();
-            updateDashboard();
-        }
-
-        function matchRiskFilter(score, filterVal) {
-            if (filterVal === 'ALL') return true;
-            if (filterVal === 'NONE') return score === 0;
-            if (filterVal === 'LOW') return score >= 1.0 && score <= 3.9;
-            if (filterVal === 'MED') return score >= 4.0 && score <= 6.9;
-            if (filterVal === 'HIGH') return score >= 7.0 && score <= 9.9;
-            if (filterVal === 'CRIT') return score >= 10.0;
-            return true;
-        }
-
-        function getRiskLabel(score) {
-            if (score === 0) return { text: '無風險', class: 'bg-slate-800 text-slate-400 border border-slate-700' };
-            if (score <= 3.9) return { text: '低風險', class: 'bg-emerald-950/80 text-emerald-400 border border-emerald-700/50' };
-            if (score <= 6.9) return { text: '中風險', class: 'bg-amber-950/80 text-amber-400 border border-amber-700/50' };
-            if (score < 10.0) return { text: '高風險', class: 'bg-orange-950/80 text-orange-400 border border-orange-700/50 font-semibold' };
-            return { text: '超高風險', class: 'bg-rose-950/90 text-rose-400 border border-rose-600/70 font-bold' };
-        }
-
-        function getLatestMonthFilteredData() {
-            const latestM = getLatestMonthString();
+        function getFilteredData() {
+            const targetM = getActiveSelectedMonth();
             const b = document.getElementById('branchFilter').value;
             const c = document.getElementById('categoryFilter').value;
             const r = document.getElementById('riskFilter').value;
 
             return allData.filter(d => {
-                if (latestM && String(d['月份']) !== latestM) return false;
+                if (targetM && String(d['月份']) !== targetM) return false;
                 if (b !== 'ALL' && String(d['院區']) !== b) return false;
                 if (c !== 'ALL' && String(d['軟體類別']) !== c) return false;
                 const score = parseFloat(d['CVE風險指數(3.x)']) || 0;
@@ -1281,24 +1108,29 @@
         }
 
         function updateDashboard() {
-            const latestData = getLatestMonthFilteredData();
+            const currentScopeData = getFilteredData();
+            const activeMonth = getActiveSelectedMonth();
 
-            const vulnRecords = latestData.filter(d => (parseInt(d['CVE弱點數量']) || 0) > 0 || (parseFloat(d['CVE風險指數(3.x)']) || 0) > 0).length;
-            const uniqueComputers = new Set(latestData.map(d => d['電腦名稱'])).size;
-            const totalVuln = latestData.reduce((sum, d) => sum + (parseInt(d['CVE弱點數量']) || 0), 0);
+            document.getElementById('currentDataScopeBadge').innerText = `基準：${activeMonth ? activeMonth + ' 月份' : '全部'} 資料`;
+            document.getElementById('pieChartBadge').innerText = `${activeMonth ? activeMonth + ' 月' : ''} 軟體分佈`;
+
+            const vulnRecords = currentScopeData.filter(d => (parseInt(d['CVE弱點數量']) || 0) > 0 || (parseFloat(d['CVE風險指數(3.x)']) || 0) > 0).length;
+            const uniqueComputers = new Set(currentScopeData.map(d => d['電腦名稱'])).size;
+            const totalVuln = currentScopeData.reduce((sum, d) => sum + (parseInt(d['CVE弱點數量']) || 0), 0);
 
             document.getElementById('kpiVulnRecords').innerText = vulnRecords.toLocaleString();
             document.getElementById('kpiUniqueComputers').innerText = uniqueComputers.toLocaleString();
             document.getElementById('kpiTotalVuln').innerText = totalVuln.toLocaleString();
 
-            updateCharts(latestData);
+            updateCharts(currentScopeData);
             currentPage = 1;
             updateTable();
         }
 
-        function updateCharts(latestData) {
+        function updateCharts(currentScopeData) {
+            // 1. 軟體類別圓餅圖
             const catCounts = {};
-            latestData.forEach(d => {
+            currentScopeData.forEach(d => {
                 const cat = d['軟體類別'] || '未知';
                 catCounts[cat] = (catCounts[cat] || 0) + 1;
             });
@@ -1337,13 +1169,11 @@
                 }
             });
 
-            const activeMonths = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean)
-                .sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
-
+            // 2. 月份風險指數 1~10 分佈趨勢 (多月折線圖)
             const riskLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-            const techColors = ['#06b6d4', '#f59e0b', '#10b981', '#f43f5e', '#a855f7', '#38bdf8'];
+            const techColors = ['#06b6d4', '#f59e0b', '#10b981', '#f43f5e', '#a855f7', '#38bdf8', '#fb7185'];
 
-            const datasets = activeMonths.map((m, idx) => {
+            const datasets = availableMonthsList.map((m, idx) => {
                 const b = document.getElementById('branchFilter').value;
                 const c = document.getElementById('categoryFilter').value;
                 const r = document.getElementById('riskFilter').value;
@@ -1395,8 +1225,9 @@
                 }
             });
 
+            // 3. 各院區弱點數量佔比 (圓餅圖)
             const branchVulnMap = {};
-            latestData.forEach(d => {
+            currentScopeData.forEach(d => {
                 const b = d['院區'] || '未分配';
                 branchVulnMap[b] = (branchVulnMap[b] || 0) + (parseInt(d['CVE弱點數量']) || 0);
             });
@@ -1434,8 +1265,9 @@
                 }
             });
 
+            // 4. 高風險軟體分佈 TOP 10 (橫條圖)
             const highRiskMap = {};
-            latestData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => {
+            currentScopeData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => {
                 const sw = d['資產名稱'] || '未知軟體';
                 highRiskMap[sw] = (highRiskMap[sw] || 0) + 1;
             });
@@ -1478,8 +1310,9 @@
                 }
             });
 
+            // 5. 單位弱點加權排行 TOP 10 (橫條圖)
             const unitRiskMap = {};
-            latestData.forEach(d => {
+            currentScopeData.forEach(d => {
                 const dept = d['部門'] || '未分配';
                 if (dept === '未分配') return;
                 const risk = parseFloat(d['CVE風險指數(3.x)']) || 0;
@@ -1524,8 +1357,9 @@
                 }
             });
 
+            // 6. 各院區設備資產分佈 (長條圖)
             const branchCounts = {};
-            latestData.forEach(d => {
+            currentScopeData.forEach(d => {
                 const b = d['院區'] || '未分配';
                 branchCounts[b] = (branchCounts[b] || 0) + 1;
             });
@@ -1568,6 +1402,64 @@
             });
         }
 
+        function populateFilters() {
+            const branches = [...new Set(allData.map(d => String(d['院區'])))].filter(Boolean).sort();
+            const categories = [...new Set(allData.map(d => String(d['軟體類別'])))].filter(Boolean).sort();
+
+            const branchSelect = document.getElementById('branchFilter');
+            const categorySelect = document.getElementById('categoryFilter');
+
+            const curB = branchSelect.value;
+            const curC = categorySelect.value;
+
+            branchSelect.innerHTML = '<option value="ALL">全部院區 (All Branches)</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
+            categorySelect.innerHTML = '<option value="ALL">全部類別 (All Categories)</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            branchSelect.value = branches.includes(curB) ? curB : 'ALL';
+            categorySelect.value = categories.includes(curC) ? curC : 'ALL';
+
+            // 修補分析選單更新
+            const pNew = document.getElementById('patchNewMonth');
+            const pOld = document.getElementById('patchOldMonth');
+            pNew.innerHTML = availableMonthsList.map(m => `<option value="${m}">${m} 月</option>`).join('');
+            pOld.innerHTML = availableMonthsList.map(m => `<option value="${m}">${m} 月</option>`).join('');
+
+            if (availableMonthsList.length >= 2) {
+                pNew.value = availableMonthsList[availableMonthsList.length - 1];
+                pOld.value = availableMonthsList[availableMonthsList.length - 2];
+            } else if (availableMonthsList.length === 1) {
+                pNew.value = availableMonthsList[0];
+                pOld.value = availableMonthsList[0];
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('monthFilter').value = 'LATEST';
+            document.getElementById('branchFilter').value = 'ALL';
+            document.getElementById('categoryFilter').value = 'ALL';
+            document.getElementById('riskFilter').value = 'ALL';
+            clearSearch();
+            updateDashboard();
+        }
+
+        function matchRiskFilter(score, filterVal) {
+            if (filterVal === 'ALL') return true;
+            if (filterVal === 'NONE') return score === 0;
+            if (filterVal === 'LOW') return score >= 1.0 && score <= 3.9;
+            if (filterVal === 'MED') return score >= 4.0 && score <= 6.9;
+            if (filterVal === 'HIGH') return score >= 7.0 && score <= 9.9;
+            if (filterVal === 'CRIT') return score >= 10.0;
+            return true;
+        }
+
+        function getRiskLabel(score) {
+            if (score === 0) return { text: '無風險', class: 'bg-slate-800 text-slate-400 border border-slate-700' };
+            if (score <= 3.9) return { text: '低風險', class: 'bg-emerald-950/80 text-emerald-400 border border-emerald-700/50' };
+            if (score <= 6.9) return { text: '中風險', class: 'bg-amber-950/80 text-amber-400 border border-amber-700/50' };
+            if (score < 10.0) return { text: '高風險', class: 'bg-orange-950/80 text-orange-400 border border-orange-700/50 font-semibold' };
+            return { text: '超高風險', class: 'bg-rose-950/90 text-rose-400 border border-rose-600/70 font-bold' };
+        }
+
         function onSearchInput() {
             const val = document.getElementById('tableSearch').value.trim();
             document.getElementById('btnClearSearch').classList.toggle('hidden', val === '');
@@ -1594,13 +1486,13 @@
         }
 
         function getTableSearchSourceData(hasSearchQuery) {
-            const latestM = getLatestMonthString();
+            const targetM = getActiveSelectedMonth();
             const b = document.getElementById('branchFilter').value;
             const c = document.getElementById('categoryFilter').value;
             const r = document.getElementById('riskFilter').value;
 
             return allData.filter(d => {
-                if (!hasSearchQuery && latestM && String(d['月份']) !== latestM) return false;
+                if (!hasSearchQuery && targetM && String(d['月份']) !== targetM) return false;
                 if (b !== 'ALL' && String(d['院區']) !== b) return false;
                 if (c !== 'ALL' && String(d['軟體類別']) !== c) return false;
                 const score = parseFloat(d['CVE風險指數(3.x)']) || 0;
@@ -1623,16 +1515,15 @@
             const rawSearch = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
             const queryTokens = rawSearch.length > 0 ? rawSearch.split(/\s+/).filter(Boolean) : [];
             const hasSearchQuery = queryTokens.length > 0;
+            const activeM = getActiveSelectedMonth();
 
-            const latestM = getLatestMonthString();
             const badgeEl = document.getElementById('tableScopeBadge');
-
             if (hasSearchQuery) {
                 badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-indigo-950 text-indigo-300 border border-indigo-700/50';
-                badgeEl.innerHTML = `<i class="fa-solid fa-magnifying-glass mr-1 text-[9px]"></i>全域檢索模式 (含歷史月份)`;
+                badgeEl.innerHTML = `<i class="fa-solid fa-magnifying-glass mr-1 text-[9px]"></i>全域檢索模式 (跨所有月份)`;
             } else {
                 badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-emerald-950 text-emerald-400 border border-emerald-800/50';
-                badgeEl.innerHTML = `<i class="fa-solid fa-lock mr-1 text-[9px]"></i>最新 ${latestM} 月份基準`;
+                badgeEl.innerHTML = `<i class="fa-solid fa-calendar mr-1 text-[9px]"></i>${activeM} 月份基準`;
             }
 
             const sourcePool = getTableSearchSourceData(hasSearchQuery);
@@ -1654,9 +1545,9 @@
             tbody.innerHTML = '';
 
             const hasSearchQuery = (document.getElementById('tableSearch').value || '').trim().length > 0;
-            const latestM = getLatestMonthString();
+            const activeM = getActiveSelectedMonth();
 
-            const scopeText = hasSearchQuery ? `全院歷史資料庫中` : `最新 ${latestM} 月份中`;
+            const scopeText = hasSearchQuery ? `全院歷史資料庫中` : `${activeM} 月份中`;
             document.getElementById('tableRecordCountInfo').innerText = 
                 `在 ${scopeText} 查詢到 ${total.toLocaleString()} 筆相符記錄 (目前呈現第 ${startIndex + 1} ~ ${Math.min(total, startIndex + pageSize)} 筆)`;
 
@@ -1807,7 +1698,7 @@
             }
 
             filtered.forEach(item => {
-                let actionBadge = '<span class="inline-flex items-center gap-1.5 text-emerald-400 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>派送自動更新 (神網/WSUS)</span>';
+                let actionBadge = '<span class="inline-flex items-center gap-1.5 text-emerald-400 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>派送自動更新 (WSUS/端點派送)</span>';
                 if (item.name.toLowerCase().includes('java') || item.name.toLowerCase().includes('oracle')) {
                     actionBadge = '<span class="inline-flex items-center gap-1.5 text-rose-400 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>白名單隔離 + 逐步汰換中</span>';
                 } else if (item.name.toLowerCase().includes('701') || item.cat.includes('專案') || item.cat.includes('驅動')) {
@@ -1829,10 +1720,9 @@
         }
 
         function renderMonthlyTrendChart(oldM, newM, rep, add, delta) {
-            const months = [...new Set(allData.map(d => String(d['月份'])))].filter(Boolean).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
-            const labels = months.map(m => m + '月');
-            const repData = months.map(m => (m === newM ? rep : Math.round(rep * 0.85)));
-            const addData = months.map(m => (m === newM ? add : Math.round(add * 1.1)));
+            const labels = availableMonthsList.map(m => m + '月');
+            const repData = availableMonthsList.map(m => (m === newM ? rep : Math.round(rep * 0.85)));
+            const addData = availableMonthsList.map(m => (m === newM ? add : Math.round(add * 1.1)));
             const deltaData = repData.map((r, i) => r - addData[i]);
 
             if (monthlyVulnTrendChart) monthlyVulnTrendChart.destroy();
@@ -1964,10 +1854,10 @@
             const cFilter = document.getElementById('downloadCategoryFilter').value;
             const rawSearch = (document.getElementById('downloadSearchInput').value || '').trim().toLowerCase();
             const queryTokens = rawSearch.length > 0 ? rawSearch.split(/\s+/).filter(Boolean) : [];
-            const latestM = getLatestMonthString();
+            const activeM = getActiveSelectedMonth();
 
             const searchPool = allData.filter(d => {
-                if (queryTokens.length === 0 && latestM && String(d['月份']) !== latestM) return false;
+                if (queryTokens.length === 0 && activeM && String(d['月份']) !== activeM) return false;
                 if (bFilter !== 'ALL' && String(d['院區']) !== bFilter) return false;
                 if (cFilter !== 'ALL' && String(d['軟體類別']) !== cFilter) return false;
                 return true;
