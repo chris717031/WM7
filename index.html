@@ -118,12 +118,17 @@
         <header class="border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30 px-6 py-3 flex flex-wrap justify-between items-center gap-3">
             <div class="flex items-center space-x-3">
                 <span id="userScopeBadge" class="px-2 py-0.5 rounded text-[10px] font-mono tracking-wider uppercase bg-emerald-950 text-emerald-400 border border-emerald-800/50">SEC-OPS</span>
-                <span id="syncStatus" class="text-xs font-mono text-slate-400">登入中...</span>
+                <span id="syncStatus" class="text-xs font-mono text-slate-400">同步中...</span>
             </div>
 
-            <div class="flex items-center space-x-2.5">
+            <div class="flex items-center space-x-2">
                 <button onclick="loadFromTurso()" class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-300 bg-slate-900 border border-cyan-500/40 rounded-lg hover:bg-cyan-950/50 hover:border-cyan-400 cursor-pointer shadow-md transition font-mono">
                     <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 重新載入
+                </button>
+
+                <!-- 管理員功能：新增客戶 (專屬資料庫) -->
+                <button id="btnCreateTenant" onclick="openCreateTenantModal()" class="hidden inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300 bg-amber-950/40 border border-amber-500/40 rounded-lg hover:bg-amber-950/70 hover:border-amber-400 cursor-pointer shadow-md transition font-mono">
+                    <i class="fa-solid fa-building-circle-plus mr-1 text-amber-400"></i> 新增客戶
                 </button>
 
                 <!-- 管理員功能：建立新帳號 -->
@@ -141,9 +146,14 @@
                     <i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 Turso
                 </button>
 
-                <!-- 使用者資訊與登出按鈕 -->
+                <!-- 使用者資訊、變更密碼與登出按鈕 -->
                 <div class="pl-2 border-l border-slate-800 flex items-center space-x-2">
                     <span id="headerUserName" class="text-xs text-slate-300 font-mono font-medium">--</span>
+                    <!-- 變更密碼按鈕 (全員皆有) -->
+                    <button onclick="openChangePasswordModal()" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-cyan-400 text-xs font-mono transition flex items-center gap-1" title="變更個人密碼">
+                        <i class="fa-solid fa-key text-cyan-400"></i> 變更密碼
+                    </button>
+                    <!-- 登出按鈕 -->
                     <button onclick="handleLogout()" class="px-2 py-1 rounded bg-rose-950/40 border border-rose-800/40 text-rose-400 hover:bg-rose-900/50 text-xs font-mono transition" title="登出系統">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
@@ -177,9 +187,9 @@
                             </select>
                         </div>
                         <div>
-                            <label id="unitFilterLabel" class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">2. 選擇院區 (Hospital Branch)</label>
+                            <label id="unitFilterLabel" class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">2. 選擇院區/單位</label>
                             <select id="branchFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition" onchange="updateDashboard()">
-                                <option value="ALL">全部院區 (All Branches)</option>
+                                <option value="ALL">全部 (All Units)</option>
                             </select>
                         </div>
                         <div>
@@ -261,7 +271,7 @@
                                 <h3 class="text-base font-semibold text-slate-100 flex items-center">
                                     <span class="w-1.5 h-4 bg-indigo-500 rounded-sm mr-2"></span>月份風險指數 1~10 分佈趨勢 (折線圖)
                                 </h3>
-                                <span class="text-[11px] font-mono text-indigo-400/80 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">跨月趨勢 (無小數點)</span>
+                                <span class="text-[11px] font-mono text-indigo-400/80 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-800/40">跨月趨勢</span>
                             </div>
                             <p class="text-xs text-slate-400 mb-4">跨月份對比 CVSS 風險分數 1 至 10 之軟體裝機筆數消長</p>
                         </div>
@@ -460,7 +470,7 @@
         </main>
     </div>
 
-    <!-- ================= 登入驗證視窗 (清空提示與停用自動代入) ================= -->
+    <!-- ================= 登入驗證視窗 (強制攔截，不自動填入) ================= -->
     <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
         <div class="glass-card rounded-2xl p-8 max-w-sm w-full mx-4 border border-cyan-500/40 shadow-2xl">
             <div class="text-center mb-6">
@@ -471,7 +481,6 @@
                 <p class="text-xs text-slate-400 font-mono mt-1">請登入您的授權帳號</p>
             </div>
             <form onsubmit="onLoginFormSubmit(event)" class="space-y-4" autocomplete="off">
-                <!-- 虛擬隱藏輸入欄位，避免特定瀏覽器強制將儲存的密碼注入第一個輸入框 -->
                 <input type="text" style="display:none">
                 <input type="password" style="display:none">
 
@@ -488,7 +497,83 @@
                 </button>
             </form>
         </div>
-      </div>
+    </div>
+
+    <!-- ================= 變更密碼 Modal (全員通用) ================= -->
+    <div id="changePasswordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+        <div class="glass-card rounded-2xl p-6 max-w-sm w-full mx-4 border border-cyan-500/40 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-100 flex items-center">
+                    <i class="fa-solid fa-key text-cyan-400 mr-2"></i> 變更登入密碼
+                </h3>
+                <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <form onsubmit="handleChangePasswordSubmit(event)" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">目前原密碼</label>
+                    <input type="password" id="oldPassword" required placeholder="請輸入舊密碼" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                </div>
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">設定新密碼</label>
+                    <input type="password" id="newPasswordInput" required minlength="6" placeholder="請輸入新密碼 (至少 6 碼)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                </div>
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">再次確認新密碼</label>
+                    <input type="password" id="confirmNewPasswordInput" required minlength="6" placeholder="再次輸入新密碼" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeChangePasswordModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">取消</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold font-mono">確認變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 管理員功能：新增客戶 (專屬資料庫) Modal ================= -->
+    <div id="createTenantModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+        <div class="glass-card rounded-2xl p-6 max-w-md w-full mx-4 border border-amber-500/40 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-100 flex items-center">
+                    <i class="fa-solid fa-building-circle-plus text-amber-400 mr-2"></i> 新增客戶機構與專屬資料庫配置
+                </h3>
+                <button onclick="closeCreateTenantModal()" class="text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <form onsubmit="handleCreateTenantSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">客戶機構全銜 (Company Name)</label>
+                    <input type="text" id="tenantCompanyName" required placeholder="例: 威策電腦股份有限公司" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-mono text-slate-300 mb-1">機構型態</label>
+                        <select id="tenantOrgType" onchange="onTenantOrgChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 focus:outline-none">
+                            <option value="enterprise">一般企業公司</option>
+                            <option value="hospital">醫療院所</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-mono text-slate-300 mb-1">單位稱謂標籤</label>
+                        <input type="text" id="tenantUnitLabel" required value="分公司" placeholder="例: 分公司, 部門, 院區" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">專屬 Turso 資料庫名稱 (Database Name)</label>
+                    <input type="text" id="tenantDbName" required placeholder="例: wm7-wace" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">專屬 Pipeline 連線 URL</label>
+                    <input type="text" id="tenantDbUrl" required placeholder="例: https://wm7-wace.aws-ap-northeast-1.turso.io/v2/pipeline" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-mono text-slate-300 mb-1">專屬 Database Auth Token (金鑰)</label>
+                    <textarea id="tenantDbToken" required rows="2" placeholder="貼上在該資料庫產生的 Database Token" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 font-mono text-[11px] focus:outline-none"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeCreateTenantModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">取消</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold font-mono">註冊並儲存客戶</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- ================= 管理員功能：建立新帳號 Modal ================= -->
@@ -503,29 +588,18 @@
 
             <form onsubmit="handleCreateUserSubmit(event)" class="space-y-3 text-xs">
                 <div>
-                    <label class="block font-mono text-slate-300 mb-1">客戶公司名稱</label>
-                    <input type="text" id="newCompany" required placeholder="例: 臺北市立聯合醫院 或 威策電腦" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                    <label class="block font-mono text-slate-300 mb-1">選擇所屬客戶公司</label>
+                    <select id="newUserTenantSelect" onchange="onUserTenantSelectChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 focus:outline-none">
+                        <option value="">載入客戶清單中...</option>
+                    </select>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-mono text-slate-300 mb-1">組織形態</label>
-                        <select id="newOrgType" onchange="onOrgTypeChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 focus:outline-none">
-                            <option value="hospital">醫療院所 (院區制)</option>
-                            <option value="enterprise">一般企業 (分公司/部門)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block font-mono text-slate-300 mb-1">單位稱謂標籤</label>
-                        <input type="text" id="newUnitLabel" required value="院區" placeholder="例: 院區, 分公司, 部門" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-mono text-slate-300 mb-1">帳號 (Username)</label>
+                        <label class="block font-mono text-slate-300 mb-1">帳號 (不分大小寫)</label>
                         <input type="text" id="newUsername" required placeholder="例: user_hsinchu" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
                     </div>
                     <div>
-                        <label class="block font-mono text-slate-300 mb-1">密碼</label>
+                        <label class="block font-mono text-slate-300 mb-1">初始密碼</label>
                         <input type="password" id="newPassword" required placeholder="設定初始密碼" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
                     </div>
                 </div>
@@ -558,15 +632,20 @@
         Chart.register(ChartDataLabels);
 
         // ========================================================
-        // Turso HTTP 雲端資料庫配置 (使用正確的 Database Token)
+        // Turso 中央管理庫連線配置
         // ========================================================
-        const TURSO_HTTP_URL = "https://wm7-wade.aws-ap-northeast-1.turso.io/v2/pipeline";
-        const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM5NzY1NzEsImlkIjoiMDFhMWIxMmUtMDkwMS03MGIwLWFlMGMtZTJhYWMxNTFkNDE1Iiwia2lkIjoiV2hFZGhJdGh2VXBQSW9vMEhSelJOdHFKRllmNEtuYktkUGZkd3dfSFQ5dyIsInJpZCI6IjgzOTdiYzA1LTZmNDYtNDU4ZS1iZDYzLTUyN2VmZDczOTBkMiJ9.658zdTfI7o24Lm40Fj92bpP8M7IclJzFiRtyM3kI0F-IfLvTG3p7uI1HENIJWv7fwPn9hBwaoQ3GZO3RrxWgDQ";
+        const CENTRAL_DB_URL = "https://wm7-wade.aws-ap-northeast-1.turso.io/v2/pipeline";
+        const CENTRAL_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM5NzY1NzEsImlkIjoiMDFhMWIxMmUtMDkwMS03MGIwLWFlMGMtZTJhYWMxNTFkNDE1Iiwia2lkIjoiV2hFZGhJdGh2VXBQSW9vMEhSelJOdHFKRllmNEtuYktkUGZkd3dfSFQ5dyIsInJpZCI6IjgzOTdiYzA1LTZmNDYtNDU4ZS1iZDYzLTUyN2VmZDczOTBkMiJ9.658zdTfI7o24Lm40Fj92bpP8M7IclJzFiRtyM3kI0F-IfLvTG3p7uI1HENIJWv7fwPn9hBwaoQ3GZO3RrxWgDQ";
+
+        // 動態資料庫連線指標 (支援各客戶專屬獨立 DB)
+        let ACTIVE_DB_URL = CENTRAL_DB_URL;
+        let ACTIVE_AUTH_TOKEN = CENTRAL_AUTH_TOKEN;
 
         let currentUser = null;
         let allData = [];
         let newlyImportedRawRows = [];
         let availableMonthsList = [];
+        let tenantsList = [];
 
         let currentPage = 1;
         let pageSize = 100;
@@ -581,84 +660,196 @@
             return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-    // 登入送出 (帳號不分大小寫)
-async function onLoginFormSubmit(event) {
-    event.preventDefault();
-    // 關鍵：將使用者輸入的帳號強制轉為小寫並去除前後空白
-    const u = document.getElementById('loginUsername').value.trim().toLowerCase();
-    const p = document.getElementById('loginPassword').value.trim();
-    const btn = document.getElementById('btnLoginSubmit');
+        // 登入驗證 (帳號不分大小寫)
+        async function onLoginFormSubmit(event) {
+            event.preventDefault();
+            const u = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const p = document.getElementById('loginPassword').value.trim();
+            const btn = document.getElementById('btnLoginSubmit');
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 驗證身分中...';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 驗證中...';
 
-    try {
-        const pHash = await hashPassword(p);
-        // 使用 LOWER(username) = ? 進行資料庫比對，不分大小寫
-        const rows = await executeTursoSQL(
-            'SELECT username, display_name, role, company_name, org_type, scope_unit, unit_label FROM sys_users WHERE LOWER(username) = ? AND password_hash = ?;',
-            [u, pHash]
-        );
+            try {
+                const pHash = await hashPassword(p);
+                // 1. 至中央庫驗證帳號
+                const rows = await executeTursoSQL(
+                    'SELECT username, display_name, role, company_name, org_type, scope_unit, unit_label FROM sys_users WHERE LOWER(username) = ? AND password_hash = ?;',
+                    [u, pHash],
+                    CENTRAL_DB_URL,
+                    CENTRAL_AUTH_TOKEN
+                );
 
-        if (rows && rows.length > 0) {
-            currentUser = rows[0];
-            sessionStorage.setItem('tpech_auth_user', JSON.stringify(currentUser));
-            document.getElementById('loginModal').classList.add('hidden');
-            applyUserPermissions();
-            loadFromTurso();
-        } else {
-            alert('❌ 帳號或密碼錯誤，請重新確認！');
-        }
-    } catch (err) {
-        alert(`登入驗證異常: ${err.message}`);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = '登入系統';
-    }
+                if (rows && rows.length > 0) {
+                    currentUser = rows[0];
 
+                    // 2. 檢索該客戶專屬資料庫連線資訊
+                    const tenantRows = await executeTursoSQL(
+                        'SELECT db_name, db_url, db_token FROM sys_tenants WHERE company_name = ?;',
+                        [currentUser.company_name],
+                        CENTRAL_DB_URL,
+                        CENTRAL_AUTH_TOKEN
+                    );
+
+                    if (tenantRows && tenantRows.length > 0) {
+                        ACTIVE_DB_URL = tenantRows[0].db_url || CENTRAL_DB_URL;
+                        ACTIVE_AUTH_TOKEN = tenantRows[0].db_token || CENTRAL_AUTH_TOKEN;
+                    } else {
+                        ACTIVE_DB_URL = CENTRAL_DB_URL;
+                        ACTIVE_AUTH_TOKEN = CENTRAL_AUTH_TOKEN;
+                    }
+
+                    sessionStorage.setItem('sec_ops_auth_user', JSON.stringify(currentUser));
+                    sessionStorage.setItem('sec_ops_active_db', JSON.stringify({ url: ACTIVE_DB_URL, token: ACTIVE_AUTH_TOKEN }));
+
+                    document.getElementById('loginModal').classList.add('hidden');
+                    applyUserPermissions();
+                    loadFromTurso();
+                } else {
+                    alert('❌ 帳號或密碼錯誤，請重新確認！');
+                }
+            } catch (err) {
+                alert(`登入驗證異常: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '登入系統';
+            }
         }
 
         function handleLogout() {
-            sessionStorage.removeItem('tpech_auth_user');
+            sessionStorage.removeItem('sec_ops_auth_user');
+            sessionStorage.removeItem('sec_ops_active_db');
             currentUser = null;
             location.reload();
         }
 
-        // 介面權限與組織稱謂動態套用
-        function applyUserPermissions() {
+        // ========================================================
+        // 變更密碼模組 (全員可用)
+        // ========================================================
+        function openChangePasswordModal() {
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPasswordInput').value = '';
+            document.getElementById('confirmNewPasswordInput').value = '';
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+        }
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        }
+
+        async function handleChangePasswordSubmit(event) {
+            event.preventDefault();
             if (!currentUser) return;
 
-            const unitLbl = currentUser.unit_label || '院區/單位';
-            const comp = currentUser.company_name || '資安戰情中心';
+            const oldP = document.getElementById('oldPassword').value.trim();
+            const newP = document.getElementById('newPasswordInput').value.trim();
+            const confirmP = document.getElementById('confirmNewPasswordInput').value.trim();
 
-            document.getElementById('sidebarOrgTitle').innerText = comp;
-            document.getElementById('headerUserName').innerText = `${currentUser.display_name} (${currentUser.scope_unit === 'ALL' ? '全域' : currentUser.scope_unit})`;
-            document.getElementById('userScopeBadge').innerText = currentUser.role === 'admin' ? 'SYSTEM ADMIN' : `${comp}`;
+            if (newP !== confirmP) {
+                alert('❌ 兩次輸入的新密碼不一致，請重新確認！');
+                return;
+            }
 
-            // 動態調整標籤文字
-            document.getElementById('unitFilterLabel').innerText = `2. 選擇${unitLbl}`;
-            document.getElementById('unitVulnPieTitle').innerHTML = `<span class="w-1.5 h-4 bg-rose-500 rounded-sm mr-2"></span>各${unitLbl}弱點數量佔比`;
-            document.getElementById('thUnitHeader').innerText = unitLbl;
+            try {
+                const oldHash = await hashPassword(oldP);
+                // 驗證舊密碼
+                const verifyRows = await executeTursoSQL(
+                    'SELECT username FROM sys_users WHERE LOWER(username) = ? AND password_hash = ?;',
+                    [currentUser.username.toLowerCase(), oldHash],
+                    CENTRAL_DB_URL,
+                    CENTRAL_AUTH_TOKEN
+                );
 
-            // 權限控管：僅管理員顯示「建立帳號」與「匯入新月份」
-            const btnCreate = document.getElementById('btnCreateUser');
-            const btnUpload = document.getElementById('btnUploadFile');
-            if (currentUser.role === 'admin') {
-                btnCreate.classList.remove('hidden');
-                btnUpload.classList.remove('hidden');
-            } else {
-                btnCreate.classList.add('hidden');
-                btnUpload.classList.add('hidden');
+                if (!verifyRows || verifyRows.length === 0) {
+                    alert('❌ 原密碼輸入錯誤，無法變更！');
+                    return;
+                }
+
+                // 更新新密碼雜湊
+                const newHash = await hashPassword(newP);
+                await executeTursoSQL(
+                    'UPDATE sys_users SET password_hash = ? WHERE LOWER(username) = ?;',
+                    [newHash, currentUser.username.toLowerCase()],
+                    CENTRAL_DB_URL,
+                    CENTRAL_AUTH_TOKEN
+                );
+
+                alert('🎉 密碼已成功更新！下次登入請使用新密碼。');
+                closeChangePasswordModal();
+            } catch (err) {
+                alert(`變更密碼失敗: ${err.message}`);
             }
         }
 
-        // 管理員 Modal 開關
-        function openCreateUserModal() { document.getElementById('createUserModal').classList.remove('hidden'); }
-        function closeCreateUserModal() { document.getElementById('createUserModal').classList.add('hidden'); }
-        function onOrgTypeChange() {
-            const org = document.getElementById('newOrgType').value;
-            document.getElementById('newUnitLabel').value = (org === 'hospital') ? '院區' : '分公司';
+        // ========================================================
+        // 管理者功能：新增客戶 (專屬資料庫配置)
+        // ========================================================
+        function openCreateTenantModal() {
+            document.getElementById('tenantCompanyName').value = '';
+            document.getElementById('tenantDbName').value = '';
+            document.getElementById('tenantDbUrl').value = '';
+            document.getElementById('tenantDbToken').value = '';
+            document.getElementById('createTenantModal').classList.remove('hidden');
         }
+        function closeCreateTenantModal() {
+            document.getElementById('createTenantModal').classList.add('hidden');
+        }
+        function onTenantOrgChange() {
+            const org = document.getElementById('tenantOrgType').value;
+            document.getElementById('tenantUnitLabel').value = (org === 'hospital') ? '院區' : '分公司';
+        }
+
+        async function handleCreateTenantSubmit(event) {
+            event.preventDefault();
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('❌ 權限不足！');
+                return;
+            }
+
+            const cName = document.getElementById('tenantCompanyName').value.trim();
+            const org = document.getElementById('tenantOrgType').value;
+            const uLbl = document.getElementById('tenantUnitLabel').value.trim();
+            const dbName = document.getElementById('tenantDbName').value.trim();
+            const dbUrl = document.getElementById('tenantDbUrl').value.trim();
+            const dbToken = document.getElementById('tenantDbToken').value.trim();
+
+            try {
+                const sql = `
+                INSERT INTO sys_tenants (company_name, db_name, db_url, db_token, org_type, unit_label)
+                VALUES (?, ?, ?, ?, ?, ?);
+                `;
+                await executeTursoSQL(sql, [cName, dbName, dbUrl, dbToken, org, uLbl], CENTRAL_DB_URL, CENTRAL_AUTH_TOKEN);
+                alert(`🎉 客戶【${cName}】及其專屬資料庫【${dbName}】註冊成功！`);
+                closeCreateTenantModal();
+            } catch (err) {
+                alert(`註冊客戶失敗: ${err.message}`);
+            }
+        }
+
+        // ========================================================
+        // 管理者功能：建立使用者帳號 Modal
+        // ========================================================
+        async function openCreateUserModal() {
+            // 讀取當前所有註冊客戶
+            try {
+                const rows = await executeTursoSQL(
+                    'SELECT company_name, org_type, unit_label FROM sys_tenants ORDER BY id ASC;',
+                    [],
+                    CENTRAL_DB_URL,
+                    CENTRAL_AUTH_TOKEN
+                );
+                tenantsList = rows || [];
+                const sel = document.getElementById('newUserTenantSelect');
+                if (tenantsList.length > 0) {
+                    sel.innerHTML = tenantsList.map(t => `<option value="${t.company_name}">${t.company_name} (${t.unit_label})</option>`).join('');
+                } else {
+                    sel.innerHTML = '<option value="臺北市立聯合醫院">臺北市立聯合醫院 (院區)</option>';
+                }
+            } catch (e) {
+                console.warn("無法取得客戶清單:", e);
+            }
+            document.getElementById('createUserModal').classList.remove('hidden');
+        }
+        function closeCreateUserModal() { document.getElementById('createUserModal').classList.add('hidden'); }
 
         async function handleCreateUserSubmit(event) {
             event.preventDefault();
@@ -667,10 +858,10 @@ async function onLoginFormSubmit(event) {
                 return;
             }
 
-            const comp = document.getElementById('newCompany').value.trim();
-            const org = document.getElementById('newOrgType').value;
-            const lbl = document.getElementById('newUnitLabel').value.trim();
-            const u = document.getElementById('newUsername').value.trim();
+            const selTenantName = document.getElementById('newUserTenantSelect').value;
+            const tObj = tenantsList.find(t => t.company_name === selTenantName) || { org_type: 'hospital', unit_label: '院區' };
+
+            const u = document.getElementById('newUsername').value.trim().toLowerCase();
             const p = document.getElementById('newPassword').value.trim();
             const name = document.getElementById('newDisplayName').value.trim();
             const role = document.getElementById('newRole').value;
@@ -682,8 +873,8 @@ async function onLoginFormSubmit(event) {
                 INSERT INTO sys_users (username, password_hash, display_name, role, company_name, org_type, scope_unit, unit_label)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                 `;
-                await executeTursoSQL(sql, [u, pHash, name, role, comp, org, scope, lbl]);
-                alert(`✅ 帳號【${u}】建立成功！\n所屬公司: ${comp}\n管轄單位: ${scope} (${lbl})`);
+                await executeTursoSQL(sql, [u, pHash, name, role, selTenantName, tObj.org_type, scope, tObj.unit_label], CENTRAL_DB_URL, CENTRAL_AUTH_TOKEN);
+                alert(`✅ 帳號【${u}】建立成功！\n所屬公司: ${selTenantName}\n管轄單位: ${scope} (${tObj.unit_label})`);
                 closeCreateUserModal();
             } catch (err) {
                 alert(`建立失敗: ${err.message}`);
@@ -691,9 +882,41 @@ async function onLoginFormSubmit(event) {
         }
 
         // ========================================================
-        // Turso 標準 HTTP Pipeline API
+        // 介面權限與組織稱謂動態套用
         // ========================================================
-        async function executeTursoSQL(sql, args = []) {
+        function applyUserPermissions() {
+            if (!currentUser) return;
+
+            const unitLbl = currentUser.unit_label || '院區/單位';
+            const comp = currentUser.company_name || '資安戰情中心';
+
+            document.getElementById('sidebarOrgTitle').innerText = comp;
+            document.getElementById('headerUserName').innerText = `${currentUser.display_name} (${currentUser.scope_unit === 'ALL' ? '全域' : currentUser.scope_unit})`;
+            document.getElementById('userScopeBadge').innerText = currentUser.role === 'admin' ? 'SYSTEM ADMIN' : `${comp}`;
+
+            document.getElementById('unitFilterLabel').innerText = `2. 選擇${unitLbl}`;
+            document.getElementById('unitVulnPieTitle').innerHTML = `<span class="w-1.5 h-4 bg-rose-500 rounded-sm mr-2"></span>各${unitLbl}弱點數量佔比`;
+            document.getElementById('thUnitHeader').innerText = unitLbl;
+
+            const btnTenant = document.getElementById('btnCreateTenant');
+            const btnCreate = document.getElementById('btnCreateUser');
+            const btnUpload = document.getElementById('btnUploadFile');
+
+            if (currentUser.role === 'admin') {
+                btnTenant.classList.remove('hidden');
+                btnCreate.classList.remove('hidden');
+                btnUpload.classList.remove('hidden');
+            } else {
+                btnTenant.classList.add('hidden');
+                btnCreate.classList.add('hidden');
+                btnUpload.classList.add('hidden');
+            }
+        }
+
+        // ========================================================
+        // Turso HTTP Pipeline 執行函式 (支援切換目標資料庫)
+        // ========================================================
+        async function executeTursoSQL(sql, args = [], dbUrl = ACTIVE_DB_URL, dbToken = ACTIVE_AUTH_TOKEN) {
             const formattedArgs = args.map(arg => {
                 if (typeof arg === 'number') {
                     return Number.isInteger(arg) ? { type: 'integer', value: arg } : { type: 'float', value: arg };
@@ -708,10 +931,10 @@ async function onLoginFormSubmit(event) {
                 ]
             };
 
-            const response = await fetch(TURSO_HTTP_URL, {
+            const response = await fetch(dbUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${TURSO_AUTH_TOKEN}`,
+                    'Authorization': `Bearer ${dbToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
@@ -733,7 +956,7 @@ async function onLoginFormSubmit(event) {
             });
         }
 
-        // 清洗與遮罩 (徹底消除 .0)
+        // 清洗與遮罩 (徹底剔除 .0)
         function sanitizeAndMaskRow(rawRow, defaultYear, defaultMonth) {
             let rawMonthStr = String(rawRow['月份'] || rawRow.month || defaultMonth || '').trim();
             let month = '';
@@ -793,7 +1016,7 @@ async function onLoginFormSubmit(event) {
         }
 
         // ========================================================
-        // 核心同步：依使用者身分隔離資料
+        // 核心同步：依專屬資料庫與使用者轄區讀取
         // ========================================================
         async function loadFromTurso() {
             if (!currentUser) return;
@@ -804,7 +1027,6 @@ async function onLoginFormSubmit(event) {
             syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 同步【${targetScope}】數據中...`;
 
             try {
-                // 1. 取得月份清單 (過濾非數字，確保無小數點)
                 let monthSql = 'SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN (\'份\', \'月份\') ';
                 let monthArgs = [];
 
@@ -821,7 +1043,7 @@ async function onLoginFormSubmit(event) {
                 }))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
 
                 if (availableMonthsList.length === 0) {
-                    syncText.innerHTML = `<span class="text-amber-400">⚠️ 【${targetScope}】無資產記錄</span>`;
+                    syncText.innerHTML = `<span class="text-amber-400">⚠️ 【${targetScope}】暫無資產記錄</span>`;
                     sideStats.innerText = '0 筆';
                     allData = [];
                     updateDashboard();
@@ -830,7 +1052,6 @@ async function onLoginFormSubmit(event) {
 
                 allData = [];
 
-                // 2. 逐月讀取受轄區限制的數據
                 for (let i = 0; i < availableMonthsList.length; i++) {
                     const m = availableMonthsList[i];
                     let dataSql = 'SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?)';
@@ -977,7 +1198,6 @@ async function onLoginFormSubmit(event) {
         }
 
         function updateCharts(currentScopeData) {
-            // 圓餅圖
             const catCounts = {};
             currentScopeData.forEach(d => {
                 const cat = d['軟體類別'] || '未知';
@@ -1018,7 +1238,6 @@ async function onLoginFormSubmit(event) {
                 }
             });
 
-            // 折線圖 (多月對比，無小數點)
             const riskLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
             const techColors = ['#06b6d4', '#f59e0b', '#10b981', '#f43f5e', '#a855f7', '#38bdf8', '#fb7185'];
 
@@ -1074,7 +1293,6 @@ async function onLoginFormSubmit(event) {
                 }
             });
 
-            // 單位弱點分佈圓餅圖
             const branchVulnMap = {};
             currentScopeData.forEach(d => {
                 const b = d['院區'] || '未分配';
@@ -1114,7 +1332,6 @@ async function onLoginFormSubmit(event) {
                 }
             });
 
-            // 高危軟體排行
             const highRiskMap = {};
             currentScopeData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => {
                 const sw = d['資產名稱'] || '未知軟體';
@@ -1160,7 +1377,6 @@ async function onLoginFormSubmit(event) {
             });
         }
 
-        // 明細表格渲染與分頁
         function onSearchInput() {
             const val = document.getElementById('tableSearch').value.trim();
             document.getElementById('btnClearSearch').classList.toggle('hidden', val === '');
@@ -1261,9 +1477,6 @@ async function onLoginFormSubmit(event) {
             }
         }
 
-        // ========================================================
-        // 修補分析邏輯
-        // ========================================================
         function runPatchAnalysis() {
             const newM = document.getElementById('patchNewMonth').value;
             const oldM = document.getElementById('patchOldMonth').value;
@@ -1286,7 +1499,6 @@ async function onLoginFormSubmit(event) {
             document.getElementById('kpiPatchRepaired').innerText = rep.toLocaleString();
             document.getElementById('kpiNetProgress').innerText = `${newHigh.size.toLocaleString()} 項`;
 
-            // 明細比對
             const agg = {};
             oldData.forEach(d => {
                 const n = d['資產名稱'];
@@ -1318,9 +1530,6 @@ async function onLoginFormSubmit(event) {
             });
         }
 
-        // ========================================================
-        // 檔案匯入 (管理者)
-        // ========================================================
         function triggerFileSelect() { document.getElementById('realFileInput').click(); }
 
         function parseYearMonthFromFileName(fileName) {
@@ -1343,7 +1552,6 @@ async function onLoginFormSubmit(event) {
                 }
             }
 
-            // 業務邏輯：盤點檔為上個月成果，自動倒推一個月
             if (detectedMonth !== null && detectedMonth >= 1 && detectedMonth <= 12) {
                 let prev = detectedMonth - 1;
                 if (prev === 0) prev = 12;
@@ -1423,9 +1631,9 @@ async function onLoginFormSubmit(event) {
                             ]
                         }
                     }));
-                    await fetch(TURSO_HTTP_URL, {
+                    await fetch(ACTIVE_DB_URL, {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${TURSO_AUTH_TOKEN}`, 'Content-Type': 'application/json' },
+                        headers: { 'Authorization': `Bearer ${ACTIVE_AUTH_TOKEN}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ requests: requests.concat([{ type: 'close' }]) })
                     });
                 }
@@ -1440,7 +1648,6 @@ async function onLoginFormSubmit(event) {
             }
         }
 
-        // 分頁切換
         function switchTab(tabId) {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             ['overview', 'patch', 'recommendations', 'patch-download'].forEach(t => {
@@ -1453,23 +1660,28 @@ async function onLoginFormSubmit(event) {
             else if (tabId === 'patch') runPatchAnalysis();
         }
 
-      window.addEventListener('DOMContentLoaded', () => {
-            // 強制清空輸入框，防止瀏覽器快取自動填充
+        window.addEventListener('DOMContentLoaded', () => {
             const uInput = document.getElementById('loginUsername');
             const pInput = document.getElementById('loginPassword');
             if (uInput) uInput.value = '';
             if (pInput) pInput.value = '';
 
-            const saved = sessionStorage.getItem('tpech_auth_user');
-            if (saved) {
+            const savedUser = sessionStorage.getItem('sec_ops_auth_user');
+            const savedDb = sessionStorage.getItem('sec_ops_active_db');
+            if (savedUser && savedDb) {
                 try {
-                    currentUser = JSON.parse(saved);
+                    currentUser = JSON.parse(savedUser);
+                    const dbObj = JSON.parse(savedDb);
+                    ACTIVE_DB_URL = dbObj.url || CENTRAL_DB_URL;
+                    ACTIVE_AUTH_TOKEN = dbObj.token || CENTRAL_AUTH_TOKEN;
+
                     document.getElementById('loginModal').classList.add('hidden');
                     applyUserPermissions();
                     loadFromTurso();
                     return;
                 } catch (e) {
-                    sessionStorage.removeItem('tpech_auth_user');
+                    sessionStorage.removeItem('sec_ops_auth_user');
+                    sessionStorage.removeItem('sec_ops_active_db');
                 }
             }
             document.getElementById('loginModal').classList.remove('hidden');
