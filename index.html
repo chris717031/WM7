@@ -3198,13 +3198,68 @@ image_84f1fd.png
 {CA11B628-4D7E-46CA-9210-A7C826EB4B6C}.png
 + 1
 
+這兩個報錯的具體原因如下：   
+{66A9F2A7-ABA4-4B51-8536-2DA0F412D2BF}.png
+
+Unexpected token 'const' (at WM7/:4295)：
+正常的乾淨檔案僅約 2,211 行，但瀏覽器截圖中出現了高達 4,295 行。這代表在 GitHub 網頁版編輯時，先前的程式碼沒有先清空，導致同一份檔案被重複貼上疊加了兩次。   
+{66A9F2A7-ABA4-4B51-8536-2DA0F412D2BF}.png
++ 1
+
+Invalid or unexpected token (at WM7/:3084)：
+先前的 SQL 查詢字串中含有未跳脫的單引號，加上重複的 const unitRows = await executeTursoSQL( 行，導致 JavaScript 引擎在解析時語法崩潰，進而使登入功能完全無法被觸發。   
+{66A9F2A7-ABA4-4B51-8536-2DA0F412D2BF}.png
+
+解決方法
+已將所有 SQL 字串改用 ES6 反引號（Template Literals `...`）安全封裝，並修正了多餘的重複語法。
+
+請下載下方重新生成的完整 index.html，並務必執行「先全選刪除，再貼上」：
+
+Your HTML file is ready:
+
+「HTML」圖示
+index
+ HTML 
+更新與驗證步驟（重要）
+清空 GitHub 舊內容：
+
+開啟 GitHub 倉庫中的 index.html 編輯頁面。   
+{1EF4056D-2A94-4AB4-B434-61E5F3EDCDAB}.png
+
+點進編輯框後，先按 Ctrl + A（全選），接著按 Backspace 或 Delete 將所有舊內容全部清空（確保行數回到 1）。   
+{1EF4056D-2A94-4AB4-B434-61E5F3EDCDAB}.png
+
+貼入新程式碼：
+
+將上方產生的 index.html 完整內容複製，貼入 GitHub 的編輯框中。   
+{1EF4056D-2A94-4AB4-B434-61E5F3EDCDAB}.png
+
+點擊右上角綠色的 Commit changes 提交儲存。   
+{1EF4056D-2A94-4AB4-B434-61E5F3EDCDAB}.png
+
+強制重新整理：
+
+等候約 20～30 秒 GitHub Pages 發布完成。
+
+回到瀏覽器登入頁面，按鍵盤 Ctrl + F5（強制略過快取重新整理）。   
+image_84f1fd.png
++ 2
+
+驗證登入：
+
+按 F12 查看 Console，紅色的 SyntaxError 與 Unexpected token 均已排除。   
+{66A9F2A7-ABA4-4B51-8536-2DA0F412D2BF}.png
+
+輸入管理者帳號 admin、密碼 admin123 即可順利登入！   
+{C1704B2F-E90B-467A-9F39-5BA97ECF0505}.png
+
 
 
 
 
 Gemini 是 AI，有時可能會出錯。
 
-正在分析
+已透過程式碼處理及分析
 <!DOCTYPE html>
 <html lang="zh-TW" class="dark">
 <head>
@@ -4291,7 +4346,6 @@ Gemini 是 AI，有時可能會出錯。
             const dbToken = (targetTenant && targetTenant.db_token) ? targetTenant.db_token : CENTRAL_AUTH_TOKEN;
 
             try {
-                const unitRows = await executeTursoSQL(
                 const unitRows = await executeTursoSQL(
                     `SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN ('院區', '單位') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院')) ORDER BY "院區" ASC;`,
                     [selectedCompany, selectedCompany],
