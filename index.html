@@ -591,53 +591,73 @@
         </div>
     </div>
 
-    <!-- ================= 管理員功能：建立新帳號 Modal ================= -->
+    <!-- ================= 管理員功能：建立新帳號 Modal (依角色動態勾選) ================= -->
     <div id="createUserModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-        <div class="glass-card rounded-2xl p-6 max-w-md w-full mx-4 border border-cyan-500/40 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div class="glass-card rounded-2xl p-6 max-w-lg w-full mx-4 border border-cyan-500/40 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 shrink-0">
                 <h3 class="text-sm font-bold text-slate-100 flex items-center">
                     <i class="fa-solid fa-user-plus text-cyan-400 mr-2"></i> 建立新使用者帳號與授權
                 </h3>
                 <button onclick="closeCreateUserModal()" class="text-slate-400 hover:text-white text-xs">✕</button>
             </div>
 
-            <form onsubmit="handleCreateUserSubmit(event)" class="space-y-3 text-xs">
+            <form onsubmit="handleCreateUserSubmit(event)" class="space-y-3.5 text-xs overflow-y-auto pr-1 flex-1">
+                <!-- 1. 權限角色 (移至第 1 項) -->
                 <div>
-                    <label class="block font-mono text-slate-300 mb-1">選擇所屬客戶公司</label>
-                    <select id="newUserTenantSelect" onchange="onUserTenantSelectChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 focus:outline-none">
-                        <option value="">載入客戶清單中...</option>
+                    <label class="block font-mono text-slate-300 mb-1">1. 權限角色</label>
+                    <select id="newRole" onchange="onRoleSelectionChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-cyan-300 font-semibold focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                        <option value="user" selected>一般使用者 (受轄區限制)</option>
+                        <option value="admin">系統管理者 (檢視全部轄區)</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-mono text-slate-300 mb-1">帳號 (不分大小寫)</label>
-                        <input type="text" id="newUsername" required placeholder="例: user_hsinchu" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block font-mono text-slate-300 mb-1">初始密碼</label>
-                        <input type="password" id="newPassword" required placeholder="設定初始密碼" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-mono text-slate-300 mb-1">使用者姓名/稱謂</label>
-                        <input type="text" id="newDisplayName" required placeholder="例: 資訊專員" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block font-mono text-slate-300 mb-1">權限角色</label>
-                        <select id="newRole" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none">
-                            <option value="user">一般使用者 (受轄區限制)</option>
-                            <option value="admin">系統管理者 (檢視全部轄區)</option>
+
+                <!-- 2. 所屬客戶公司 (移至第 2 項，依角色動態切換單選或多選清單) -->
+                <div>
+                    <label id="companySelectionLabel" class="block font-mono text-slate-300 mb-1">2. 選擇所屬客戶公司</label>
+                    <!-- 一般使用者：單選下拉選單 -->
+                    <div id="companySingleSelectWrapper">
+                        <select id="newUserTenantSelect" onchange="onUserTenantChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                            <option value="">載入客戶名冊中...</option>
                         </select>
                     </div>
+                    <!-- 系統管理者：多選勾選框清單 -->
+                    <div id="companyMultiSelectWrapper" class="hidden p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 max-h-32 overflow-y-auto space-y-1.5 font-mono">
+                        <!-- 動態生成客戶公司 Checkbox 清單 -->
+                    </div>
                 </div>
+
+                <!-- 3. 帳號與初始密碼 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-mono text-slate-300 mb-1">3-1. 帳號 (不分大小寫)</label>
+                        <input type="text" id="newUsername" required placeholder="例: z4410@tpech.gov.tw" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block font-mono text-slate-300 mb-1">3-2. 初始密碼</label>
+                        <input type="password" id="newPassword" required placeholder="設定初始密碼 (需符合強度)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                    </div>
+                </div>
+
+                <!-- 4. 使用者姓名/稱謂 -->
                 <div>
-                    <label class="block font-mono text-slate-300 mb-1">管轄單位 (比對資料庫名稱)</label>
-                    <input type="text" id="newScopeUnit" required placeholder="填寫 'ALL' 或具體名稱 (例: 仁Ｏ院區 或 新竹分公司)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 font-mono focus:outline-none">
+                    <label class="block font-mono text-slate-300 mb-1">4. 使用者姓名/稱謂</label>
+                    <input type="text" id="newDisplayName" required placeholder="例: 資訊專員 或 仁愛維護主管" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500">
                 </div>
-                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeCreateUserModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">取消</button>
-                    <button type="submit" class="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold font-mono">建立帳號</button>
+
+                <!-- 5. 管轄單位 (比對資料庫名稱列出動態勾選清單) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-mono text-slate-300">5. 管轄單位 (比對資料庫名稱)</label>
+                        <span id="unitScopeHelperText" class="text-[10px] text-cyan-400 font-mono">支援勾選單一或複選轄區</span>
+                    </div>
+                    <div id="scopeUnitsCheckboxContainer" class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 max-h-36 overflow-y-auto space-y-1.5 font-mono">
+                        <div class="text-slate-500 text-[11px]">正在比對資料庫管轄單位...</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800 shrink-0">
+                    <button type="button" onclick="closeCreateUserModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition">取消</button>
+                    <button type="submit" class="px-5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold font-mono shadow-md transition">建立帳號</button>
                 </div>
             </form>
         </div>
@@ -929,35 +949,219 @@
         }
 
         // ========================================================
-        // 管理者功能：建立使用者帳號 Modal
+        // 管理者功能：建立使用者帳號 (欄位順序調整與動態勾選)
         // ========================================================
         async function openCreateUserModal() {
             await refreshTenantsList();
+            
+            // 初始化清空欄位
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('newDisplayName').value = '';
+            document.getElementById('newRole').value = 'user';
+
+            // 填充單選下拉選單
             const sel = document.getElementById('newUserTenantSelect');
             if (tenantsList.length > 0) {
                 sel.innerHTML = tenantsList.map(t => `<option value="${t.company_name}">${t.company_name} (${t.unit_label})</option>`).join('');
             } else {
                 sel.innerHTML = '<option value="臺北市立聯合醫院">臺北市立聯合醫院 (院區)</option>';
             }
+
+            // 觸發初始渲染
+            await onRoleSelectionChange();
             document.getElementById('createUserModal').classList.remove('hidden');
         }
-        function closeCreateUserModal() { document.getElementById('createUserModal').classList.add('hidden'); }
 
+        function closeCreateUserModal() {
+            document.getElementById('createUserModal').classList.add('hidden');
+        }
+
+        // 1. 權限角色切換 (連動公司與管轄單位)
+        async function onRoleSelectionChange() {
+            const role = document.getElementById('newRole').value;
+            const companySingleWrapper = document.getElementById('companySingleSelectWrapper');
+            const companyMultiWrapper = document.getElementById('companyMultiSelectWrapper');
+            const companyLabel = document.getElementById('companySelectionLabel');
+            const unitContainer = document.getElementById('scopeUnitsCheckboxContainer');
+            const unitHelper = document.getElementById('unitScopeHelperText');
+
+            if (role === 'admin') {
+                // 管理者：所屬公司轉為 Checkbox 勾選清單
+                companyLabel.innerText = '2. 所屬客戶公司 (可勾選管轄之一家或多家公司)';
+                companySingleWrapper.classList.add('hidden');
+                companyMultiWrapper.classList.remove('hidden');
+
+                let compHtml = `
+                    <label class="flex items-center space-x-2 text-cyan-300 font-bold hover:bg-slate-800/60 p-1 rounded cursor-pointer">
+                        <input type="checkbox" value="ALL" checked onchange="onAdminCompanyAllToggle(this)" class="accent-cyan-500 rounded">
+                        <span>ALL (所有客戶公司)</span>
+                    </label>
+                `;
+                tenantsList.forEach(t => {
+                    compHtml += `
+                        <label class="flex items-center space-x-2 text-slate-300 hover:bg-slate-800/60 p-1 rounded cursor-pointer">
+                            <input type="checkbox" name="adminCompanyCheck" value="${t.company_name}" checked class="accent-cyan-500 rounded">
+                            <span>${t.company_name} (${t.unit_label})</span>
+                        </label>
+                    `;
+                });
+                companyMultiWrapper.innerHTML = compHtml;
+
+                // 管理者管轄單位預設鎖定為 ALL
+                unitHelper.innerText = '系統管理者預設具備全轄區權限';
+                unitContainer.innerHTML = `
+                    <label class="flex items-center space-x-2 text-cyan-300 font-bold p-1">
+                        <input type="checkbox" value="ALL" checked disabled class="accent-cyan-500 rounded">
+                        <span>ALL (所有管轄單位)</span>
+                    </label>
+                `;
+            } else {
+                // 一般使用者：所屬公司為下拉單選
+                companyLabel.innerText = '2. 選擇所屬客戶公司';
+                companySingleWrapper.classList.remove('hidden');
+                companyMultiWrapper.classList.add('hidden');
+                unitHelper.innerText = '請勾選該使用者可查看的管轄單位';
+
+                // 載入所選公司的資料庫單位清單
+                await loadScopeUnitsForSelectedTenant();
+            }
+        }
+
+        // 管理者 ALL 公司 Checkbox 切換
+        function onAdminCompanyAllToggle(allBox) {
+            const boxes = document.querySelectorAll('input[name="adminCompanyCheck"]');
+            boxes.forEach(b => b.checked = allBox.checked);
+        }
+
+        // 2. 客戶公司切換時 (一般使用者)，重新載入該公司的資料庫管轄單位
+        async function onUserTenantChange() {
+            const role = document.getElementById('newRole').value;
+            if (role === 'user') {
+                await loadScopeUnitsForSelectedTenant();
+            }
+        }
+
+        // 從資料庫動態載入該客戶公司的管轄單位
+        async function loadScopeUnitsForSelectedTenant() {
+            const unitContainer = document.getElementById('scopeUnitsCheckboxContainer');
+            unitContainer.innerHTML = '<div class="text-slate-400 text-[11px]"><i class="fa-solid fa-spinner fa-spin mr-1 text-cyan-400"></i>正在比對資料庫名稱...</div>';
+
+            const selectedCompany = document.getElementById('newUserTenantSelect').value;
+            const targetTenant = tenantsList.find(t => t.company_name === selectedCompany);
+
+            const dbUrl = (targetTenant && targetTenant.db_url) ? targetTenant.db_url : CENTRAL_DB_URL;
+            const dbToken = (targetTenant && targetTenant.db_token) ? targetTenant.db_token : CENTRAL_AUTH_TOKEN;
+
+            try {
+                // 從資料庫中比對抽出所有的「院區/單位」不重複名稱
+                const unitRows = await executeTursoSQL(
+                    'SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN (\'院區\', \'單位\') ORDER BY "院區" ASC;',
+                    [],
+                    dbUrl,
+                    dbToken
+                );
+
+                let units = unitRows.map(r => String(r['院區'])).filter(Boolean);
+
+                // 如果資料庫中暫無記錄，給予預設常用院區清單備援
+                if (units.length === 0 && selectedCompany.includes('聯合醫院')) {
+                    units = ['仁Ｏ院區', '中Ｏ院區', '和Ｏ院區', '陽Ｏ院區', '忠Ｏ院區', '婦Ｏ院區', '松Ｏ院區', '林Ｏ院區', '院Ｏ部', '中Ｏ昆明'];
+                }
+
+                let html = `
+                    <label class="flex items-center space-x-2 text-cyan-300 font-bold hover:bg-slate-800/60 p-1 rounded cursor-pointer border-b border-slate-800 pb-1.5 mb-1">
+                        <input type="checkbox" id="chkScopeAll" value="ALL" onchange="onScopeAllToggle(this)" class="accent-cyan-500 rounded">
+                        <span>ALL (包含所有管轄單位)</span>
+                    </label>
+                `;
+
+                units.forEach(u => {
+                    html += `
+                        <label class="flex items-center space-x-2 text-slate-300 hover:bg-slate-800/60 p-1 rounded cursor-pointer">
+                            <input type="checkbox" name="unitScopeCheck" value="${u}" onchange="onSingleUnitCheckChange()" class="accent-cyan-500 rounded">
+                            <span>${u}</span>
+                        </label>
+                    `;
+                });
+
+                unitContainer.innerHTML = html;
+            } catch (err) {
+                console.error("載入管轄單位失敗:", err);
+                unitContainer.innerHTML = `
+                    <div class="text-rose-400 text-[11px] mb-1">⚠️ 比對資料庫異常，提供標準預設清單：</div>
+                    <label class="flex items-center space-x-2 text-cyan-300 font-bold p-1"><input type="checkbox" value="ALL" checked class="accent-cyan-500 rounded"> <span>ALL (全部)</span></label>
+                    <label class="flex items-center space-x-2 text-slate-300 p-1"><input type="checkbox" name="unitScopeCheck" value="仁Ｏ院區" class="accent-cyan-500 rounded"> <span>仁Ｏ院區</span></label>
+                    <label class="flex items-center space-x-2 text-slate-300 p-1"><input type="checkbox" name="unitScopeCheck" value="中Ｏ院區" class="accent-cyan-500 rounded"> <span>中Ｏ院區</span></label>
+                `;
+            }
+        }
+
+        // 管轄單位 ALL 與個別項目聯動
+        function onScopeAllToggle(allBox) {
+            const boxes = document.querySelectorAll('input[name="unitScopeCheck"]');
+            boxes.forEach(b => b.checked = allBox.checked);
+        }
+
+        function onSingleUnitCheckChange() {
+            const allBox = document.getElementById('chkScopeAll');
+            const boxes = document.querySelectorAll('input[name="unitScopeCheck"]');
+            const allChecked = Array.from(boxes).every(b => b.checked);
+            if (allBox) allBox.checked = allChecked;
+        }
+
+        // 建立帳號表單提交
         async function handleCreateUserSubmit(event) {
             event.preventDefault();
             if (!currentUser || currentUser.role !== 'admin') {
-                alert('❌ 權限不足！');
+                alert('❌ 權限不足，僅系統管理者可建立帳號！');
                 return;
             }
 
-            const selTenantName = document.getElementById('newUserTenantSelect').value;
-            const tObj = tenantsList.find(t => t.company_name === selTenantName) || { org_type: 'hospital', unit_label: '院區' };
-
+            const role = document.getElementById('newRole').value;
             const u = document.getElementById('newUsername').value.trim().toLowerCase();
             const p = document.getElementById('newPassword').value.trim();
             const name = document.getElementById('newDisplayName').value.trim();
-            const role = document.getElementById('newRole').value;
-            const scope = document.getElementById('newScopeUnit').value.trim();
+
+            // 檢查初始密碼強度
+            const pCheck = validatePasswordComplexity(p, u);
+            if (!pCheck.valid) {
+                alert(`❌ 初始密碼不符合安全複雜度規範：\n\n${pCheck.message}`);
+                return;
+            }
+
+            let assignedCompany = '';
+            let orgType = 'hospital';
+            let unitLabel = '院區';
+            let assignedScope = 'ALL';
+
+            if (role === 'admin') {
+                // 系統管理者：取得勾選的公司清單
+                const compBoxes = document.querySelectorAll('input[name="adminCompanyCheck"]:checked');
+                const isAllComp = document.querySelector('input[value="ALL"]')?.checked;
+                if (isAllComp || compBoxes.length === 0 || compBoxes.length === tenantsList.length) {
+                    assignedCompany = 'ALL';
+                } else {
+                    assignedCompany = Array.from(compBoxes).map(b => b.value).join(',');
+                }
+                assignedScope = 'ALL';
+            } else {
+                // 一般使用者：單一公司，多選管轄單位
+                assignedCompany = document.getElementById('newUserTenantSelect').value;
+                const tObj = tenantsList.find(t => t.company_name === assignedCompany) || { org_type: 'hospital', unit_label: '院區' };
+                orgType = tObj.org_type;
+                unitLabel = tObj.unit_label;
+
+                const isAllScope = document.getElementById('chkScopeAll')?.checked;
+                const scopeBoxes = document.querySelectorAll('input[name="unitScopeCheck"]:checked');
+
+                if (isAllScope || scopeBoxes.length === 0) {
+                    assignedScope = 'ALL';
+                } else {
+                    // 將勾選的管轄單位以逗號串接 (如: "仁Ｏ院區,中Ｏ院區")
+                    assignedScope = Array.from(scopeBoxes).map(b => b.value).join(',');
+                }
+            }
 
             try {
                 const pHash = await hashPassword(p);
@@ -965,11 +1169,17 @@
                 INSERT INTO sys_users (username, password_hash, display_name, role, company_name, org_type, scope_unit, unit_label)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                 `;
-                await executeTursoSQL(sql, [u, pHash, name, role, selTenantName, tObj.org_type, scope, tObj.unit_label], CENTRAL_DB_URL, CENTRAL_AUTH_TOKEN);
-                alert(`✅ 帳號【${u}】建立成功！\n所屬公司: ${selTenantName}\n管轄單位: ${scope} (${tObj.unit_label})`);
+                await executeTursoSQL(
+                    sql, 
+                    [u, pHash, name, role, assignedCompany, orgType, assignedScope, unitLabel], 
+                    CENTRAL_DB_URL, 
+                    CENTRAL_AUTH_TOKEN
+                );
+
+                alert(`✅ 帳號【${u}】建立成功！\n• 權限角色: ${role === 'admin' ? '系統管理者' : '一般使用者'}\n• 所屬公司: ${assignedCompany}\n• 管轄單位: ${assignedScope}`);
                 closeCreateUserModal();
             } catch (err) {
-                alert(`建立失敗: ${err.message}`);
+                alert(`建立帳號失敗 (可能帳號已存在): ${err.message}`);
             }
         }
 
@@ -1112,7 +1322,7 @@
         }
 
         // ========================================================
-        // 核心同步：依專屬資料庫與使用者轄區讀取
+        // 核心同步：依專屬資料庫與使用者轄區讀取 (相容多轄區 IN 查詢)
         // ========================================================
         async function loadFromTurso() {
             if (!currentUser) return;
@@ -1127,8 +1337,15 @@
                 let monthArgs = [];
 
                 if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
-                    monthSql += 'AND "院區" = ? ';
-                    monthArgs.push(currentUser.scope_unit);
+                    const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
+                    if (allowedUnits.length === 1) {
+                        monthSql += 'AND "院區" = ? ';
+                        monthArgs.push(allowedUnits[0]);
+                    } else {
+                        const placeholders = allowedUnits.map(() => '?').join(',');
+                        monthSql += `AND "院區" IN (${placeholders}) `;
+                        monthArgs.push(...allowedUnits);
+                    }
                 }
 
                 const monthRows = await executeTursoSQL(monthSql, monthArgs);
@@ -1154,8 +1371,15 @@
                     let dataArgs = [m, m + '.0', m + '月'];
 
                     if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
-                        dataSql += ' AND "院區" = ?';
-                        dataArgs.push(currentUser.scope_unit);
+                        const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
+                        if (allowedUnits.length === 1) {
+                            dataSql += ' AND "院區" = ?';
+                            dataArgs.push(allowedUnits[0]);
+                        } else {
+                            const placeholders = allowedUnits.map(() => '?').join(',');
+                            dataSql += ` AND "院區" IN (${placeholders})`;
+                            dataArgs.push(...allowedUnits);
+                        }
                     }
 
                     const rows = await executeTursoSQL(dataSql, dataArgs);
@@ -1238,9 +1462,15 @@
             const categorySelect = document.getElementById('categoryFilter');
 
             if (currentUser && currentUser.role !== 'admin' && currentUser.scope_unit !== 'ALL') {
-                branchSelect.innerHTML = `<option value="${currentUser.scope_unit}">${currentUser.scope_unit}</option>`;
-                branchSelect.value = currentUser.scope_unit;
-                branchSelect.disabled = true;
+                const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
+                if (allowedUnits.length === 1) {
+                    branchSelect.innerHTML = `<option value="${allowedUnits[0]}">${allowedUnits[0]}</option>`;
+                    branchSelect.value = allowedUnits[0];
+                    branchSelect.disabled = true;
+                } else {
+                    branchSelect.disabled = false;
+                    branchSelect.innerHTML = '<option value="ALL">全部授權轄區 (All Granted)</option>' + allowedUnits.map(b => `<option value="${b}">${b}</option>`).join('');
+                }
             } else {
                 branchSelect.disabled = false;
                 branchSelect.innerHTML = '<option value="ALL">全部 (All Units)</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
