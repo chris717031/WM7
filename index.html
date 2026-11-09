@@ -140,7 +140,7 @@
                     <i class="fa-solid fa-building-circle-plus mr-1 text-amber-400"></i> 新增客戶
                 </button>
 
-                <!-- 管理者專屬：建立帳號 (點擊開啟使用者帳號建立彈窗) -->
+                <!-- 管理者專屬：建立帳號 -->
                 <button id="btnCreateUser" onclick="openCreateUserModal()" class="hidden inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-300 bg-slate-900 border border-cyan-500/40 rounded-lg hover:bg-cyan-950/50 hover:border-cyan-400 cursor-pointer shadow-md transition font-mono">
                     <i class="fa-solid fa-user-plus mr-1 text-cyan-400"></i> 建立帳號
                 </button>
@@ -1054,17 +1054,17 @@
             const dbToken = (targetTenant && targetTenant.db_token) ? targetTenant.db_token : CENTRAL_AUTH_TOKEN;
 
             try {
-                // 從資料庫中比對抽出所有的「院區/單位」不重複名稱
+                // 從資料庫中比對抽出所有的「院區/單位」不重複名稱 (綁定該公司)
                 const unitRows = await executeTursoSQL(
-                    'SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN (\'院區\', \'單位\') ORDER BY "院區" ASC;',
-                    [],
+                    'SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN (\'院區\', \'單位\') AND (company_name = ? OR company_name IS NULL) ORDER BY "院區" ASC;',
+                    [selectedCompany],
                     dbUrl,
                     dbToken
                 );
 
                 let units = unitRows.map(r => String(r['院區'])).filter(Boolean);
 
-                // 如果資料庫中暫無記錄，給予預設常用院區清單備援
+                // 如果資料庫中暫無記錄，且屬於聯醫，給予預設常用院區清單備援
                 if (units.length === 0 && selectedCompany.includes('聯合醫院')) {
                     units = ['仁Ｏ院區', '中Ｏ院區', '和Ｏ院區', '陽Ｏ院區', '忠Ｏ院區', '婦Ｏ院區', '松Ｏ院區', '林Ｏ院區', '院Ｏ部', '中Ｏ昆明'];
                 }
@@ -1076,14 +1076,18 @@
                     </label>
                 `;
 
-                units.forEach(u => {
-                    html += `
-                        <label class="flex items-center space-x-2 text-slate-300 hover:bg-slate-800/60 p-1 rounded cursor-pointer">
-                            <input type="checkbox" name="unitScopeCheck" value="${u}" onchange="onSingleUnitCheckChange()" class="accent-cyan-500 rounded">
-                            <span>${u}</span>
-                        </label>
-                    `;
-                });
+                if (units.length > 0) {
+                    units.forEach(u => {
+                        html += `
+                            <label class="flex items-center space-x-2 text-slate-300 hover:bg-slate-800/60 p-1 rounded cursor-pointer">
+                                <input type="checkbox" name="unitScopeCheck" value="${u}" onchange="onSingleUnitCheckChange()" class="accent-cyan-500 rounded">
+                                <span>${u}</span>
+                            </label>
+                        `;
+                    });
+                } else {
+                    html += `<div class="text-amber-400 text-[11px] p-1">⚠️ 該客戶目前尚未匯入資產資料，可先勾選 ALL 或待匯入後調整。</div>`;
+                }
 
                 unitContainer.innerHTML = html;
             } catch (err) {
@@ -1322,19 +1326,23 @@
         }
 
         // ========================================================
-        // 核心同步：依專屬資料庫與使用者轄區讀取 (相容多轄區 IN 查詢)
+        // 核心同步：依所屬公司 + 專屬資料庫 + 轄區 嚴格隔離讀取
         // ========================================================
         async function loadFromTurso() {
             if (!currentUser) return;
 
             const syncText = document.getElementById('syncStatus');
             const sideStats = document.getElementById('sidebarStats');
+            
+            // 當前選定或所屬之客戶公司名稱
+            const targetComp = currentUser.company_name || '臺北市立聯合醫院';
             const targetScope = currentUser.scope_unit === 'ALL' ? '全域資料' : currentUser.scope_unit;
-            syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 同步【${targetScope}】數據中...`;
+            syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 同步【${targetComp} - ${targetScope}】數據中...`;
 
             try {
-                let monthSql = 'SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN (\'份\', \'月份\') ';
-                let monthArgs = [];
+                // 1. 取得該公司的月份清單 (嚴格加入 company_name 隔離)
+                let monthSql = 'SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN (\'份\', \'月份\') AND (company_name = ? OR (company_name IS NULL AND ? = \'臺北市立聯合醫院\')) ';
+                let monthArgs = [targetComp, targetComp];
 
                 if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
                     const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
@@ -1355,20 +1363,24 @@
                     return isNaN(p) ? m : String(Math.floor(p));
                 }))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
 
+                // 若該新客戶尚未匯入任何資料，乾淨清空儀表板，不再呈現聯醫舊資料
                 if (availableMonthsList.length === 0) {
-                    syncText.innerHTML = `<span class="text-amber-400">⚠️ 【${targetScope}】暫無資產記錄</span>`;
-                    sideStats.innerText = '0 筆';
+                    syncText.innerHTML = `<span class="text-amber-400">● 客戶【${targetComp}】目前尚無端點資產資料 (請先匯入)</span>`;
+                    sideStats.innerText = `納管筆數: 0 筆`;
                     allData = [];
+                    populateMonthSelector();
+                    populateFilters();
                     updateDashboard();
                     return;
                 }
 
                 allData = [];
 
+                // 2. 逐月讀取受客戶公司與轄區雙重限制的數據
                 for (let i = 0; i < availableMonthsList.length; i++) {
                     const m = availableMonthsList[i];
-                    let dataSql = 'SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?)';
-                    let dataArgs = [m, m + '.0', m + '月'];
+                    let dataSql = 'SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = \'臺北市立聯合醫院\'))';
+                    let dataArgs = [m, m + '.0', m + '月', targetComp, targetComp];
 
                     if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
                         const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
@@ -1399,7 +1411,7 @@
                 updateDashboard();
                 runPatchAnalysis();
 
-                syncText.innerHTML = `<span class="text-emerald-400">● 【${targetScope}】同步完成 (${allData.length.toLocaleString()} 筆)</span>`;
+                syncText.innerHTML = `<span class="text-emerald-400">● 【${targetComp}】同步完成 (${allData.length.toLocaleString()} 筆)</span>`;
                 sideStats.innerText = `納管筆數: ${allData.length.toLocaleString()} 筆`;
 
             } catch (err) {
@@ -1923,12 +1935,14 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 寫入中...';
 
+            const currentComp = currentUser.company_name || '臺北市立聯合醫院';
+
             const INSERT_SQL = `
             INSERT OR IGNORE INTO endpoint_software_assets (
-                "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
+                "company_name", "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
                 "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
                 "CVE風險指數(3.x)", "CVE弱點數量"
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
             `;
 
             try {
@@ -1940,6 +1954,7 @@
                         stmt: {
                             sql: INSERT_SQL,
                             args: [
+                                { type: 'text', value: currentComp },
                                 { type: 'text', value: String(r['月份']) },
                                 { type: 'text', value: String(r['電腦名稱']) },
                                 { type: 'text', value: String(r['院區']) },
@@ -1963,7 +1978,7 @@
                         body: JSON.stringify({ requests: requests.concat([{ type: 'close' }]) })
                     });
                 }
-                alert('🎉 成功寫入 Turso 資料庫！');
+                alert(`🎉 成功寫入【${currentComp}】共 ${newlyImportedRawRows.length.toLocaleString()} 筆資料！`);
                 btn.classList.add('hidden');
                 newlyImportedRawRows = [];
                 loadFromTurso();
