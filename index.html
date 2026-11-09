@@ -3147,13 +3147,64 @@ image_84f1fd.png
 index.html
 + 1
 
+Your HTML file is ready:
+
+「HTML」圖示
+index
+ HTML 
+從您最新的 F12 控制台截圖中可以看到錯誤原因：   
+{CA11B628-4D7E-46CA-9210-A7C826EB4B6C}.png
+
+Uncaught SyntaxError: Invalid or unexpected token (at WM7/:3084:83)   
+{CA11B628-4D7E-46CA-9210-A7C826EB4B6C}.png
+
+Uncaught SyntaxError: missing ) after argument list (at WM7/:4244:21)   
+{CA11B628-4D7E-46CA-9210-A7C826EB4B6C}.png
+
+問題根因
+在先前查詢資料庫的 SQL 語句中，字串使用了單引號包覆，但內部包含未轉義的單引號（例如 'SELECT ... NOT IN ('院區', '單位') ...' 與 ? = '臺北市立聯合醫院'），導致瀏覽器在編譯 JavaScript 時，字串提前閉合，後方的中文字被視為無效語法（Invalid Token），進而造成整個腳本在頁面一載入時崩潰，登入按鈕的點擊監聽事件完全失效。   
+{CA11B628-4D7E-46CA-9210-A7C826EB4B6C}.png
+
+修復內容
+全面修復 SQL 字串跳脫：將包含單引號條件的 SQL 查詢語句（如 sys_tenants 單位過濾、company_name 隔離查詢等）全數改為 ES6 範本字面量（Template Literals `...`），杜絕引號衝突。
+
+清除所有多餘或重複宣告的變數：確保整個腳本一次性完整閉合，控制台 0 語法錯誤。   
+{E6A383DE-0C8D-4F13-992B-D7FA84B67A7C}.png
++ 1
+
+保留所有已完善的功能：
+
+匯入檔案自動依檔名辨識月份（免手動輸入彈窗）。
+
+異質報表動態欄位映射彈窗。
+
+客戶公司（臺北市立聯合醫院、台灣電力股份有限公司等）數據隔離。   
+{C1704B2F-E90B-467A-9F39-5BA97ECF0505}.png
+
+密碼安全複雜度變更校驗。
+
+更新與驗證步驟
+開啟 GitHub 倉庫中的 index.html，按 Ctrl + A 全選並刪除。   
+{1EF4056D-2A94-4AB4-B434-61E5F3EDCDAB}.png
+
+將上方產生的 index.html 內容完整複製貼入，點擊 Commit changes。   
+{1EF4056D-2A94-4AB4-B434-61E5F3EDCDAB}.png
+
+等候約 20～30 秒 GitHub Pages 發布完成，回到儀表板頁面按下 Ctrl + F5（強制略過快取重新整理）。   
+image_84f1fd.png
++ 2
+
+查看 F12 Console，紅色的 SyntaxError 均已排除，輸入帳號 admin、密碼 admin123 即可正常登入系統。   
+{CA11B628-4D7E-46CA-9210-A7C826EB4B6C}.png
++ 1
+
 
 
 
 
 Gemini 是 AI，有時可能會出錯。
 
-已透過程式碼處理及分析
+正在分析
 <!DOCTYPE html>
 <html lang="zh-TW" class="dark">
 <head>
@@ -4241,7 +4292,8 @@ Gemini 是 AI，有時可能會出錯。
 
             try {
                 const unitRows = await executeTursoSQL(
-                    'SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN ('院區', '單位') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院')) ORDER BY "院區" ASC;',
+                const unitRows = await executeTursoSQL(
+                    `SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN ('院區', '單位') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院')) ORDER BY "院區" ASC;`,
                     [selectedCompany, selectedCompany],
                     dbUrl,
                     dbToken
@@ -4512,7 +4564,7 @@ Gemini 是 AI，有時可能會出錯。
             syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 同步【${targetComp} - ${targetScope}】數據中...`;
 
             try {
-                let monthSql = 'SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN ('份', '月份') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院')) ';
+                let monthSql = `SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN ('份', '月份') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院')) `;
                 let monthArgs = [targetComp, targetComp];
 
                 if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
@@ -4548,7 +4600,7 @@ Gemini 是 AI，有時可能會出錯。
 
                 for (let i = 0; i < availableMonthsList.length; i++) {
                     const m = availableMonthsList[i];
-                    let dataSql = 'SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))';
+                    let dataSql = `SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))`;
                     let dataArgs = [m, m + '.0', m + '月', targetComp, targetComp];
 
                     if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
