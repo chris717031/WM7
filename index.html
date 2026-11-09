@@ -602,7 +602,7 @@
             </div>
 
             <form onsubmit="handleCreateUserSubmit(event)" class="space-y-3.5 text-xs overflow-y-auto pr-1 flex-1">
-                <!-- 1. 權限角色 (移至第 1 項) -->
+                <!-- 1. 權限角色 (第 1 項) -->
                 <div>
                     <label class="block font-mono text-slate-300 mb-1">1. 權限角色</label>
                     <select id="newRole" onchange="onRoleSelectionChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-cyan-300 font-semibold focus:outline-none focus:ring-1 focus:ring-cyan-500">
@@ -611,19 +611,15 @@
                     </select>
                 </div>
 
-                <!-- 2. 所屬客戶公司 (移至第 2 項，依角色動態切換單選或多選清單) -->
+                <!-- 2. 所屬客戶公司 (第 2 項) -->
                 <div>
                     <label id="companySelectionLabel" class="block font-mono text-slate-300 mb-1">2. 選擇所屬客戶公司</label>
-                    <!-- 一般使用者：單選下拉選單 -->
                     <div id="companySingleSelectWrapper">
                         <select id="newUserTenantSelect" onchange="onUserTenantChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500">
                             <option value="">載入客戶名冊中...</option>
                         </select>
                     </div>
-                    <!-- 系統管理者：多選勾選框清單 -->
-                    <div id="companyMultiSelectWrapper" class="hidden p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 max-h-32 overflow-y-auto space-y-1.5 font-mono">
-                        <!-- 動態生成客戶公司 Checkbox 清單 -->
-                    </div>
+                    <div id="companyMultiSelectWrapper" class="hidden p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 max-h-32 overflow-y-auto space-y-1.5 font-mono"></div>
                 </div>
 
                 <!-- 3. 帳號與初始密碼 -->
@@ -663,6 +659,57 @@
         </div>
     </div>
 
+    <!-- ================= 匯入欄位動態映射 Modal (各公司格式自適應) ================= -->
+    <div id="mappingModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card rounded-2xl p-6 max-w-lg w-full mx-4 border border-cyan-500/40 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-100 flex items-center">
+                    <i class="fa-solid fa-table-columns text-cyan-400 mr-2"></i> 核對匯入欄位對應
+                </h3>
+                <button onclick="closeMappingModal()" class="text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4 font-sans">
+                系統已自動比對檔案標題，請確認各系統核心欄位是否對應正確：
+            </p>
+
+            <form onsubmit="confirmFieldMapping(event)" class="space-y-3 font-mono text-xs">
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">1. 資產/軟體名稱 <span class="text-rose-400">*</span>:</span>
+                    <select id="mapCol-assetName" required class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-cyan-300 focus:outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">2. 院區/分公司/單位:</span>
+                    <select id="mapCol-branch" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">3. 電腦名稱/設備:</span>
+                    <select id="mapCol-pcName" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">4. 部門/科別:</span>
+                    <select id="mapCol-dept" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">5. 軟體類別/分類:</span>
+                    <select id="mapCol-category" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">6. CVE 風險指數 (3.x):</span>
+                    <select id="mapCol-cvss" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <span class="text-slate-300">7. CVE 弱點數量:</span>
+                    <select id="mapCol-cveCount" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none"></select>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeMappingModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">取消</button>
+                    <button type="submit" class="px-5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold font-mono">確認並載入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         Chart.register(ChartDataLabels);
 
@@ -672,7 +719,7 @@
         const CENTRAL_DB_URL = "https://wm7-wade.aws-ap-northeast-1.turso.io/v2/pipeline";
         const CENTRAL_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM5NzY1NzEsImlkIjoiMDFhMWIxMmUtMDkwMS03MGIwLWFlMGMtZTJhYWMxNTFkNDE1Iiwia2lkIjoiV2hFZGhJdGh2VXBQSW9vMEhSelJOdHFKRllmNEtuYktkUGZkd3dfSFQ5dyIsInJpZCI6IjgzOTdiYzA1LTZmNDYtNDU4ZS1iZDYzLTUyN2VmZDczOTBkMiJ9.658zdTfI7o24Lm40Fj92bpP8M7IclJzFiRtyM3kI0F-IfLvTG3p7uI1HENIJWv7fwPn9hBwaoQ3GZO3RrxWgDQ";
 
-        // 動態資料庫連線指標 (支援各客戶專屬獨立 DB)
+        // 動態資料庫連線指標
         let ACTIVE_DB_URL = CENTRAL_DB_URL;
         let ACTIVE_AUTH_TOKEN = CENTRAL_AUTH_TOKEN;
 
@@ -682,11 +729,25 @@
         let availableMonthsList = [];
         let tenantsList = [];
 
+        let pendingImportJson = [];
+        let pendingFileParsedMeta = null;
+
         let currentPage = 1;
         let pageSize = 100;
         let currentFilteredResults = [];
 
         let pieChart = null, lineChart = null, branchVulnChart = null, highRiskSwChart = null;
+
+        // 同義詞字典
+        const SYNONYMS = {
+            assetName: ['資產名稱', '軟體名稱', '軟體', '應用程式', '軟體資產', '名稱', 'software', 'displayname', 'name', 'program'],
+            branch: ['院區', '分公司', '單位', '廠區', '校區', '分支機構', '組織', 'branch', 'location', 'site', 'org'],
+            pcName: ['電腦名稱', '設備名稱', '電腦', '主機名稱', '端點名稱', '主機', 'hostname', 'computername', 'pc', 'device'],
+            dept: ['完整部門', '部門', '科室', '單位', '所屬部門', '處室', 'department', 'dept'],
+            category: ['軟體類別', '軟體分類', '類別', '分類', '軟體形態', 'category', 'type'],
+            cvss: ['CVE風險指數(3.x)', 'CVE風險指數', 'CVSS', 'CVSS3', '風險指數', 'cvss_3', 'cvss3', '風險等級'],
+            cveCount: ['CVE弱點數量', '弱點數量', 'CVE數', '弱點數', 'cve_count', 'vulnerabilities']
+        };
 
         // SHA-256 雜湊
         async function hashPassword(text) {
@@ -695,7 +756,7 @@
             return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // 登入驗證 (帳號不分大小寫)
+        // 登入驗證
         async function onLoginFormSubmit(event) {
             event.preventDefault();
             const u = document.getElementById('loginUsername').value.trim().toLowerCase();
@@ -707,7 +768,6 @@
 
             try {
                 const pHash = await hashPassword(p);
-                // 1. 至中央庫驗證帳號
                 const rows = await executeTursoSQL(
                     'SELECT username, display_name, role, company_name, org_type, scope_unit, unit_label FROM sys_users WHERE LOWER(username) = ? AND password_hash = ?;',
                     [u, pHash],
@@ -718,7 +778,6 @@
                 if (rows && rows.length > 0) {
                     currentUser = rows[0];
 
-                    // 2. 檢索該客戶專屬資料庫連線資訊
                     const tenantRows = await executeTursoSQL(
                         'SELECT db_name, db_url, db_token, org_type, unit_label FROM sys_tenants WHERE company_name = ?;',
                         [currentUser.company_name],
@@ -760,9 +819,7 @@
             location.reload();
         }
 
-        // ========================================================
-        // 變更密碼模組 (嚴格複雜性規範)
-        // ========================================================
+        // 密碼變更與複雜性檢驗
         function openChangePasswordModal() {
             document.getElementById('oldPassword').value = '';
             document.getElementById('newPasswordInput').value = '';
@@ -773,20 +830,15 @@
             document.getElementById('changePasswordModal').classList.add('hidden');
         }
 
-        // 密碼複雜性校驗函式
         function validatePasswordComplexity(password, username) {
             if (!password || password.length < 8) {
                 return { valid: false, message: '密碼長度不足，至少需為 8 個字元！' };
             }
-
-            // 檢查是否包含帳號相關字眼 (不分大小寫)
             if (username && username.length >= 3) {
                 if (password.toLowerCase().includes(username.toLowerCase())) {
                     return { valid: false, message: '密碼中不可包含您的登入帳號名稱！' };
                 }
             }
-
-            // 四種字元類別正規式檢驗
             const hasUpper = /[A-Z]/.test(password);
             const hasLower = /[a-z]/.test(password);
             const hasDigit = /[0-9]/.test(password);
@@ -800,7 +852,6 @@
                 if (!hasSpecial) missing.push('非英文字母特殊符號 (如 ! $ # % 等)');
                 return { valid: false, message: `密碼必須同時包含四種字元類型，尚缺少：\n• ` + missing.join('\n• ') };
             }
-
             return { valid: true };
         }
 
@@ -817,7 +868,6 @@
                 return;
             }
 
-            // 執行複雜性規則校驗
             const check = validatePasswordComplexity(newP, currentUser.username);
             if (!check.valid) {
                 alert(`❌ 密碼不符合安全複雜度規範：\n\n${check.message}`);
@@ -826,7 +876,6 @@
 
             try {
                 const oldHash = await hashPassword(oldP);
-                // 驗證舊密碼
                 const verifyRows = await executeTursoSQL(
                     'SELECT username FROM sys_users WHERE LOWER(username) = ? AND password_hash = ?;',
                     [currentUser.username.toLowerCase(), oldHash],
@@ -839,7 +888,6 @@
                     return;
                 }
 
-                // 更新新密碼雜湊
                 const newHash = await hashPassword(newP);
                 await executeTursoSQL(
                     'UPDATE sys_users SET password_hash = ? WHERE LOWER(username) = ?;',
@@ -855,9 +903,7 @@
             }
         }
 
-        // ========================================================
-        // 管理者功能：精簡新增客戶 (免填 URL/Token)
-        // ========================================================
+        // 新增客戶
         function openCreateTenantModal() {
             document.getElementById('tenantCompanyName').value = '';
             document.getElementById('tenantDbName').value = '';
@@ -883,7 +929,6 @@
             const uLbl = document.getElementById('tenantUnitLabel').value.trim();
             const dbName = document.getElementById('tenantDbName').value.trim() || 'wm7-wade';
 
-            // 若尚未建立獨立庫，預設承接中央管理資料庫的連線位址與金鑰
             const dbUrl = CENTRAL_DB_URL;
             const dbToken = CENTRAL_AUTH_TOKEN;
 
@@ -901,9 +946,7 @@
             }
         }
 
-        // ========================================================
-        // 管理者功能：切換客戶選單與租戶清單同步
-        // ========================================================
+        // 管理者切換客戶
         async function refreshTenantsList() {
             try {
                 const rows = await executeTursoSQL(
@@ -948,19 +991,15 @@
             await loadFromTurso();
         }
 
-        // ========================================================
-        // 管理者功能：建立使用者帳號 (欄位順序調整與動態勾選)
-        // ========================================================
+        // 建立使用者帳號
         async function openCreateUserModal() {
             await refreshTenantsList();
             
-            // 初始化清空欄位
             document.getElementById('newUsername').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('newDisplayName').value = '';
             document.getElementById('newRole').value = 'user';
 
-            // 填充單選下拉選單
             const sel = document.getElementById('newUserTenantSelect');
             if (tenantsList.length > 0) {
                 sel.innerHTML = tenantsList.map(t => `<option value="${t.company_name}">${t.company_name} (${t.unit_label})</option>`).join('');
@@ -968,7 +1007,6 @@
                 sel.innerHTML = '<option value="臺北市立聯合醫院">臺北市立聯合醫院 (院區)</option>';
             }
 
-            // 觸發初始渲染
             await onRoleSelectionChange();
             document.getElementById('createUserModal').classList.remove('hidden');
         }
@@ -977,7 +1015,6 @@
             document.getElementById('createUserModal').classList.add('hidden');
         }
 
-        // 1. 權限角色切換 (連動公司與管轄單位)
         async function onRoleSelectionChange() {
             const role = document.getElementById('newRole').value;
             const companySingleWrapper = document.getElementById('companySingleSelectWrapper');
@@ -987,7 +1024,6 @@
             const unitHelper = document.getElementById('unitScopeHelperText');
 
             if (role === 'admin') {
-                // 管理者：所屬公司轉為 Checkbox 勾選清單
                 companyLabel.innerText = '2. 所屬客戶公司 (可勾選管轄之一家或多家公司)';
                 companySingleWrapper.classList.add('hidden');
                 companyMultiWrapper.classList.remove('hidden');
@@ -1008,7 +1044,6 @@
                 });
                 companyMultiWrapper.innerHTML = compHtml;
 
-                // 管理者管轄單位預設鎖定為 ALL
                 unitHelper.innerText = '系統管理者預設具備全轄區權限';
                 unitContainer.innerHTML = `
                     <label class="flex items-center space-x-2 text-cyan-300 font-bold p-1">
@@ -1017,24 +1052,20 @@
                     </label>
                 `;
             } else {
-                // 一般使用者：所屬公司為下拉單選
                 companyLabel.innerText = '2. 選擇所屬客戶公司';
                 companySingleWrapper.classList.remove('hidden');
                 companyMultiWrapper.classList.add('hidden');
                 unitHelper.innerText = '請勾選該使用者可查看的管轄單位';
 
-                // 載入所選公司的資料庫單位清單
                 await loadScopeUnitsForSelectedTenant();
             }
         }
 
-        // 管理者 ALL 公司 Checkbox 切換
         function onAdminCompanyAllToggle(allBox) {
             const boxes = document.querySelectorAll('input[name="adminCompanyCheck"]');
             boxes.forEach(b => b.checked = allBox.checked);
         }
 
-        // 2. 客戶公司切換時 (一般使用者)，重新載入該公司的資料庫管轄單位
         async function onUserTenantChange() {
             const role = document.getElementById('newRole').value;
             if (role === 'user') {
@@ -1042,7 +1073,6 @@
             }
         }
 
-        // 從資料庫動態載入該客戶公司的管轄單位
         async function loadScopeUnitsForSelectedTenant() {
             const unitContainer = document.getElementById('scopeUnitsCheckboxContainer');
             unitContainer.innerHTML = '<div class="text-slate-400 text-[11px]"><i class="fa-solid fa-spinner fa-spin mr-1 text-cyan-400"></i>正在比對資料庫名稱...</div>';
@@ -1054,17 +1084,15 @@
             const dbToken = (targetTenant && targetTenant.db_token) ? targetTenant.db_token : CENTRAL_AUTH_TOKEN;
 
             try {
-                // 從資料庫中比對抽出所有的「院區/單位」不重複名稱 (綁定該公司)
                 const unitRows = await executeTursoSQL(
-                    'SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN (\'院區\', \'單位\') AND (company_name = ? OR company_name IS NULL) ORDER BY "院區" ASC;',
-                    [selectedCompany],
+                    'SELECT DISTINCT "院區" FROM endpoint_software_assets WHERE "院區" IS NOT NULL AND "院區" NOT IN (\'院區\', \'單位\') AND (company_name = ? OR (company_name IS NULL AND ? = \'臺北市立聯合醫院\')) ORDER BY "院區" ASC;',
+                    [selectedCompany, selectedCompany],
                     dbUrl,
                     dbToken
                 );
 
                 let units = unitRows.map(r => String(r['院區'])).filter(Boolean);
 
-                // 如果資料庫中暫無記錄，且屬於聯醫，給予預設常用院區清單備援
                 if (units.length === 0 && selectedCompany.includes('聯合醫院')) {
                     units = ['仁Ｏ院區', '中Ｏ院區', '和Ｏ院區', '陽Ｏ院區', '忠Ｏ院區', '婦Ｏ院區', '松Ｏ院區', '林Ｏ院區', '院Ｏ部', '中Ｏ昆明'];
                 }
@@ -1101,7 +1129,6 @@
             }
         }
 
-        // 管轄單位 ALL 與個別項目聯動
         function onScopeAllToggle(allBox) {
             const boxes = document.querySelectorAll('input[name="unitScopeCheck"]');
             boxes.forEach(b => b.checked = allBox.checked);
@@ -1114,7 +1141,6 @@
             if (allBox) allBox.checked = allChecked;
         }
 
-        // 建立帳號表單提交
         async function handleCreateUserSubmit(event) {
             event.preventDefault();
             if (!currentUser || currentUser.role !== 'admin') {
@@ -1127,7 +1153,6 @@
             const p = document.getElementById('newPassword').value.trim();
             const name = document.getElementById('newDisplayName').value.trim();
 
-            // 檢查初始密碼強度
             const pCheck = validatePasswordComplexity(p, u);
             if (!pCheck.valid) {
                 alert(`❌ 初始密碼不符合安全複雜度規範：\n\n${pCheck.message}`);
@@ -1140,7 +1165,6 @@
             let assignedScope = 'ALL';
 
             if (role === 'admin') {
-                // 系統管理者：取得勾選的公司清單
                 const compBoxes = document.querySelectorAll('input[name="adminCompanyCheck"]:checked');
                 const isAllComp = document.querySelector('input[value="ALL"]')?.checked;
                 if (isAllComp || compBoxes.length === 0 || compBoxes.length === tenantsList.length) {
@@ -1150,7 +1174,6 @@
                 }
                 assignedScope = 'ALL';
             } else {
-                // 一般使用者：單一公司，多選管轄單位
                 assignedCompany = document.getElementById('newUserTenantSelect').value;
                 const tObj = tenantsList.find(t => t.company_name === assignedCompany) || { org_type: 'hospital', unit_label: '院區' };
                 orgType = tObj.org_type;
@@ -1162,7 +1185,6 @@
                 if (isAllScope || scopeBoxes.length === 0) {
                     assignedScope = 'ALL';
                 } else {
-                    // 將勾選的管轄單位以逗號串接 (如: "仁Ｏ院區,中Ｏ院區")
                     assignedScope = Array.from(scopeBoxes).map(b => b.value).join(',');
                 }
             }
@@ -1187,9 +1209,7 @@
             }
         }
 
-        // ========================================================
         // 介面權限與組織稱謂動態套用
-        // ========================================================
         function applyUserPermissions() {
             if (!currentUser) return;
 
@@ -1223,9 +1243,7 @@
             }
         }
 
-        // ========================================================
-        // Turso HTTP Pipeline 執行函式 (支援切換目標資料庫)
-        // ========================================================
+        // Turso HTTP Pipeline 執行函式
         async function executeTursoSQL(sql, args = [], dbUrl = ACTIVE_DB_URL, dbToken = ACTIVE_AUTH_TOKEN) {
             const formattedArgs = args.map(arg => {
                 if (typeof arg === 'number') {
@@ -1318,6 +1336,7 @@
             const deptName = fullDept.includes('\\') ? fullDept.split('\\').pop() : fullDept;
 
             return {
+                company_name: rawRow.company_name || currentUser?.company_name || '臺北市立聯合醫院',
                 月份: month, 電腦名稱: pc, 院區: branch, 完整部門: fullDept, 部門: deptName,
                 IP位址: ip, 軟體類別: cat, 資產名稱: assetName, 資產廠商: vendor, 資產版本: version,
                 'CPE 2.3': cpe23, 'CPE完整名稱': cpeFull,
@@ -1325,22 +1344,18 @@
             };
         }
 
-        // ========================================================
-        // 核心同步：依所屬公司 + 專屬資料庫 + 轄區 嚴格隔離讀取
-        // ========================================================
+        // 核心同步：依所屬公司 + 轄區嚴格隔離
         async function loadFromTurso() {
             if (!currentUser) return;
 
             const syncText = document.getElementById('syncStatus');
             const sideStats = document.getElementById('sidebarStats');
             
-            // 當前選定或所屬之客戶公司名稱
             const targetComp = currentUser.company_name || '臺北市立聯合醫院';
             const targetScope = currentUser.scope_unit === 'ALL' ? '全域資料' : currentUser.scope_unit;
             syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 同步【${targetComp} - ${targetScope}】數據中...`;
 
             try {
-                // 1. 取得該公司的月份清單 (嚴格加入 company_name 隔離)
                 let monthSql = 'SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN (\'份\', \'月份\') AND (company_name = ? OR (company_name IS NULL AND ? = \'臺北市立聯合醫院\')) ';
                 let monthArgs = [targetComp, targetComp];
 
@@ -1363,7 +1378,6 @@
                     return isNaN(p) ? m : String(Math.floor(p));
                 }))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
 
-                // 若該新客戶尚未匯入任何資料，乾淨清空儀表板，不再呈現聯醫舊資料
                 if (availableMonthsList.length === 0) {
                     syncText.innerHTML = `<span class="text-amber-400">● 客戶【${targetComp}】目前尚無端點資產資料 (請先匯入)</span>`;
                     sideStats.innerText = `納管筆數: 0 筆`;
@@ -1376,7 +1390,6 @@
 
                 allData = [];
 
-                // 2. 逐月讀取受客戶公司與轄區雙重限制的數據
                 for (let i = 0; i < availableMonthsList.length; i++) {
                     const m = availableMonthsList[i];
                     let dataSql = 'SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = \'臺北市立聯合醫院\'))';
@@ -1868,6 +1881,9 @@
             });
         }
 
+        // ========================================================
+        // 檔案讀取、欄位映射確認與上傳寫入
+        // ========================================================
         function triggerFileSelect() { document.getElementById('realFileInput').click(); }
 
         function parseYearMonthFromFileName(fileName) {
@@ -1900,53 +1916,149 @@
 
         function processImportedFile(file) {
             if (!file) return;
-            const parsed = parseYearMonthFromFileName(file.name);
-            let applyMonth = parsed.month || prompt("請確認所屬月份 (數字 1~12):", "10");
+            pendingFileParsedMeta = parseYearMonthFromFileName(file.name);
+            let applyMonth = pendingFileParsedMeta.month || prompt("請確認所屬月份 (數字 1~12):", "10");
+            pendingFileParsedMeta.month = String(applyMonth).replace('月', '').trim();
 
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-                const sanitized = json.map(r => sanitizeAndMaskRow(r, parsed.year, applyMonth)).filter(r => r.資產名稱);
+                pendingImportJson = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
 
-                newlyImportedRawRows = sanitized;
-                allData = allData.concat(sanitized);
-                if (applyMonth && !availableMonthsList.includes(applyMonth)) {
-                    availableMonthsList.push(applyMonth);
-                    availableMonthsList.sort((a,b) => parseInt(a) - parseInt(b));
+                if (!pendingImportJson.length) {
+                    alert("⚠️ 檔案內容為空！");
+                    return;
                 }
 
-                const btn = document.getElementById('btnPushToCloud');
-                btn.classList.remove('hidden');
-                btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 ${sanitized.length.toLocaleString()} 筆至 Turso`;
-
-                populateMonthSelector();
-                populateFilters();
-                updateDashboard();
-                alert(`✅ 檔案【${file.name}】讀取成功！已辨識歸屬為【${applyMonth} 月】(共 ${sanitized.length.toLocaleString()} 筆)`);
+                const fileHeaders = Object.keys(pendingImportJson[0]);
+                openMappingModal(fileHeaders);
             };
             reader.readAsArrayBuffer(file);
         }
 
+        function openMappingModal(headers) {
+            const buildOptions = (targetKey) => {
+                let options = '<option value="">-- 未包含 (使用預設值) --</option>';
+                headers.forEach(h => {
+                    const isMatch = SYNONYMS[targetKey]?.some(syn => h.toLowerCase().trim() === syn.toLowerCase().trim());
+                    options += `<option value="${h}" ${isMatch ? 'selected' : ''}>${h}</option>`;
+                });
+                return options;
+            };
+
+            document.getElementById('mapCol-assetName').innerHTML = buildOptions('assetName');
+            document.getElementById('mapCol-branch').innerHTML = buildOptions('branch');
+            document.getElementById('mapCol-pcName').innerHTML = buildOptions('pcName');
+            document.getElementById('mapCol-dept').innerHTML = buildOptions('dept');
+            document.getElementById('mapCol-category').innerHTML = buildOptions('category');
+            document.getElementById('mapCol-cvss').innerHTML = buildOptions('cvss');
+            document.getElementById('mapCol-cveCount').innerHTML = buildOptions('cveCount');
+
+            document.getElementById('mappingModal').classList.remove('hidden');
+        }
+
+        function closeMappingModal() {
+            document.getElementById('mappingModal').classList.add('hidden');
+        }
+
+        function confirmFieldMapping(event) {
+            event.preventDefault();
+
+            const mAsset = document.getElementById('mapCol-assetName').value;
+            const mBranch = document.getElementById('mapCol-branch').value;
+            const mPc = document.getElementById('mapCol-pcName').value;
+            const mDept = document.getElementById('mapCol-dept').value;
+            const mCat = document.getElementById('mapCol-category').value;
+            const mCvss = document.getElementById('mapCol-cvss').value;
+            const mCve = document.getElementById('mapCol-cveCount').value;
+
+            const currentComp = currentUser.company_name || '預設機構';
+            const applyMonth = pendingFileParsedMeta.month;
+
+            const sanitized = pendingImportJson.map((row, idx) => {
+                const rawName = String(row[mAsset] || '').trim();
+                const rawBranch = mBranch ? String(row[mBranch] || '').trim() : '全公司/總部';
+                const rawDept = mDept ? String(row[mDept] || '').trim() : rawBranch;
+                const rawPc = mPc ? String(row[mPc] || '').trim() : `DEVICE-${idx + 1}`;
+                let rawCat = mCat ? String(row[mCat] || '').trim() : '';
+
+                if (!rawCat) {
+                    if (/microsoft|office|windows|edge|\.net|visual c\+\+/i.test(rawName)) rawCat = '微軟類';
+                    else if (/701|oracle|sap|adobe|autocad/i.test(rawName)) rawCat = '版權軟體';
+                    else if (/driver|intel|realtek|nvidia/i.test(rawName)) rawCat = '驅動程式';
+                    else rawCat = '免費軟體';
+                }
+
+                return {
+                    company_name: currentComp,
+                    月份: applyMonth,
+                    電腦名稱: rawPc,
+                    院區: rawBranch,
+                    完整部門: rawDept,
+                    部門: rawDept.includes('\\') ? rawDept.split('\\').pop() : rawDept,
+                    IP位址: String(row['IP位址'] || row['IP'] || '').trim(),
+                    軟體類別: rawCat,
+                    資產名稱: rawName,
+                    資產廠商: String(row['資產廠商'] || row['廠商'] || '未知廠商').trim(),
+                    資產版本: String(row['資產版本'] || row['版本'] || '').trim(),
+                    'CPE 2.3': String(row['CPE 2.3'] || '').trim(),
+                    'CPE完整名稱': String(row['CPE完整名稱'] || '').trim(),
+                    'CVE風險指數(2.0)': 0,
+                    'CVE風險指數(3.x)': mCvss ? (parseFloat(row[mCvss]) || 0) : 0,
+                    'CVE弱點數量': mCve ? (parseInt(row[mCve], 10) || 0) : 0
+                };
+            }).filter(r => r.資產名稱 && r.資產名稱.trim() !== "");
+
+            if (sanitized.length === 0) {
+                alert("⚠️ 映射後查無有效資料，請確認軟體名稱欄位是否有資料！");
+                return;
+            }
+
+            newlyImportedRawRows = sanitized;
+            allData = allData.concat(sanitized);
+
+            if (applyMonth && !availableMonthsList.includes(applyMonth)) {
+                availableMonthsList.push(applyMonth);
+                availableMonthsList.sort((a, b) => parseInt(a) - parseInt(b));
+            }
+
+            closeMappingModal();
+
+            const btn = document.getElementById('btnPushToCloud');
+            btn.classList.remove('hidden');
+            btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 ${sanitized.length.toLocaleString()} 筆至 Turso`;
+
+            populateMonthSelector();
+            populateFilters();
+            updateDashboard();
+
+            alert(`✅ 解析成功！共轉換【${sanitized.length.toLocaleString()}】筆資料，請點擊上方綠色按鈕【寫入 Turso】同步至雲端。`);
+        }
+
         async function pushNewRowsToTurso() {
-            if (!newlyImportedRawRows.length) return;
+            if (!newlyImportedRawRows.length) {
+                alert("目前沒有待寫入的資料！");
+                return;
+            }
             const btn = document.getElementById('btnPushToCloud');
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 寫入中...';
 
-            const currentComp = currentUser.company_name || '臺北市立聯合醫院';
+            const currentComp = currentUser.company_name || '台灣電力股份有限公司';
 
             const INSERT_SQL = `
             INSERT OR IGNORE INTO endpoint_software_assets (
-                "company_name", "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
+                company_name, "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
                 "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
                 "CVE風險指數(3.x)", "CVE弱點數量"
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
             `;
 
             try {
-                const batchSize = 500;
+                const batchSize = 300;
+                let successCount = 0;
+
                 for (let i = 0; i < newlyImportedRawRows.length; i += batchSize) {
                     const batch = newlyImportedRawRows.slice(i, i + batchSize);
                     const requests = batch.map(r => ({
@@ -1972,18 +2084,34 @@
                             ]
                         }
                     }));
-                    await fetch(ACTIVE_DB_URL, {
+
+                    const resp = await fetch(ACTIVE_DB_URL, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${ACTIVE_AUTH_TOKEN}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ requests: requests.concat([{ type: 'close' }]) })
                     });
+
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        throw new Error(`Turso HTTP ${resp.status}: ${errText}`);
+                    }
+
+                    const resJson = await resp.json();
+                    if (resJson.results && resJson.results[0]?.type === 'error') {
+                        throw new Error(resJson.results[0].error.message);
+                    }
+
+                    successCount += batch.length;
+                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 已寫入 ${successCount} / ${newlyImportedRawRows.length}...`;
                 }
-                alert(`🎉 成功寫入【${currentComp}】共 ${newlyImportedRawRows.length.toLocaleString()} 筆資料！`);
+
+                alert(`🎉 成功寫入【${currentComp}】共 ${successCount.toLocaleString()} 筆資料至資料庫！`);
                 btn.classList.add('hidden');
                 newlyImportedRawRows = [];
-                loadFromTurso();
+                await loadFromTurso();
             } catch (e) {
-                alert(`寫入失敗: ${e.message}`);
+                console.error("寫入資料庫失敗:", e);
+                alert(`❌ 寫入 Turso 失敗：\n${e.message}\n\n請打開瀏覽器開發者工具 (F12) 的 Console 查看詳細原因。`);
             } finally {
                 btn.disabled = false;
             }
