@@ -90,7 +90,7 @@
                 </button>
                 <button onclick="switchTab('patch')" id="tabBtn-patch" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-slate-900/60 transition text-left">
                     <i class="fa-solid fa-screwdriver-wrench text-sm w-4"></i>
-                    <span class="font-semibold tracking-wider uppercase">修補分析</span>
+                    <span class="font-semibold tracking-wider uppercase">數據比對</span>
                 </button>
                 <button onclick="switchTab('recommendations')" id="tabBtn-recommendations" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-slate-900/60 transition text-left">
                     <i class="fa-solid fa-calendar-check text-sm w-4"></i>
@@ -383,7 +383,7 @@
                         <div>
                             <h2 class="text-base font-bold text-slate-100 flex items-center">
                                 <i class="fa-solid fa-code-compare text-emerald-400 mr-2.5"></i>
-                                軟體資產與弱點修復月度比對戰情
+                                端點軟體資產與弱點月度數據比對戰情
                             </h2>
                             <p class="text-xs text-slate-400 mt-0.5">追蹤跨月度弱點軟體處置成效與消長差額</p>
                         </div>
@@ -447,7 +447,7 @@
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-800 pb-4 mb-5 gap-3">
                         <div>
                             <h2 class="text-lg font-bold text-slate-100 flex items-center">
-                                <i class="fa-solid fa-robot text-cyan-400 mr-2.5"></i> AI 智慧端點弱點修補規劃 (Groq Llama-3.3-70b)
+                                <i class="fa-solid fa-robot text-cyan-400 mr-2.5"></i> AI 智慧端點弱點修補規劃 (Groq AI Engine)
                             </h2>
                             <p id="aiPlanningSubtitle" class="text-xs text-slate-400 mt-1 font-sans">
                                 依據當前客戶高風險軟體清單與機構型態，自動生成階梯式派送與隔離策略
@@ -2308,6 +2308,36 @@ ${JSON.stringify(topSoftware)}
   ]
 }`;
 
+                // 自動偵測帳號可用之最佳 Groq 模型 (避免模型下架或權限異動造成 404)
+                let selectedModel = "llama-3.1-8b-instant";
+                try {
+                    const modelsResp = await fetch("https://api.groq.com/openai/v1/models", {
+                        headers: { "Authorization": `Bearer ${groqApiKey}` }
+                    });
+                    if (modelsResp.ok) {
+                        const modelsData = await modelsResp.json();
+                        const availableIds = (modelsData.data || []).map(m => m.id);
+                        const preferredOrder = [
+                            "llama-3.3-70b-versatile",
+                            "openai/gpt-oss-120b",
+                            "qwen/qwen3-32b",
+                            "llama-3.1-70b-versatile",
+                            "llama-3.1-8b-instant",
+                            "gemma2-9b-it"
+                        ];
+                        const matched = preferredOrder.find(id => availableIds.includes(id));
+                        if (matched) {
+                            selectedModel = matched;
+                        } else if (availableIds.length > 0) {
+                            // 排除 whisper 語音模型，挑選第一個可用文字模型
+                            const textModel = availableIds.find(id => !id.includes("whisper") && !id.includes("guard"));
+                            if (textModel) selectedModel = textModel;
+                        }
+                    }
+                } catch (modelErr) {
+                    console.warn("查詢 Groq 可用模型清單失敗，使用預設模型:", modelErr);
+                }
+
                 const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
                     headers: {
@@ -2315,7 +2345,7 @@ ${JSON.stringify(topSoftware)}
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile",
+                        model: selectedModel,
                         messages: [
                             { role: "system", content: systemPrompt },
                             { role: "user", content: userPrompt }
