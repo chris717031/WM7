@@ -2209,6 +2209,36 @@
             throw new Error("尚未在 Turso sys_config 資料表中設定 GROQ_API_KEY！");
         }
 
+        // 輔助函式：自動推斷原廠與官方載點
+        function guessVendorFromName(swName) {
+            if (/microsoft|office|windows|edge|\.net|visual c\+\+|onedrive|teams/i.test(swName)) return 'Microsoft';
+            if (/google|chrome/i.test(swName)) return 'Google';
+            if (/adobe|acrobat|reader/i.test(swName)) return 'Adobe';
+            if (/7-zip/i.test(swName)) return 'Igor Pavlov (7-Zip)';
+            if (/java|oracle|virtualbox/i.test(swName)) return 'Oracle';
+            if (/intel/i.test(swName)) return 'Intel';
+            if (/nvidia/i.test(swName)) return 'NVIDIA';
+            if (/realtek/i.test(swName)) return 'Realtek';
+            if (/701server|701client|soyal/i.test(swName)) return '茂旭資訊 (SOYAL)';
+            if (/teamviewer/i.test(swName)) return 'TeamViewer';
+            if (/anydesk/i.test(swName)) return 'AnyDesk';
+            if (/line/i.test(swName)) return 'LY Corporation';
+            if (/mozilla|firefox/i.test(swName)) return 'Mozilla';
+            return '原廠/開發商';
+        }
+
+        function buildOfficialSearchUrl(swName) {
+            if (/microsoft|windows|office|edge|\.net|visual c\+\+/i.test(swName)) {
+                return `https://www.catalog.update.microsoft.com/Search.aspx?q=${encodeURIComponent(swName)}`;
+            }
+            if (/chrome/i.test(swName)) return 'https://www.google.com/chrome/';
+            if (/7-zip/i.test(swName)) return 'https://www.7-zip.org/download.html';
+            if (/adobe|acrobat|reader/i.test(swName)) return 'https://get.adobe.com/tw/reader/';
+            if (/firefox/i.test(swName)) return 'https://www.mozilla.org/zh-TW/firefox/new/';
+            if (/701server|701client/i.test(swName)) return 'https://www.soyal.com.tw/download.php';
+            return `https://www.google.com/search?q=${encodeURIComponent(swName + ' 官方下載 最新版本')}`;
+        }
+
         async function autoUpdateRemediationWithGroq(forceRefresh = false) {
             if (!currentUser || allData.length === 0) {
                 document.getElementById('aiPlanningContainer').innerHTML = `<div class="p-6 text-center text-slate-400 font-mono text-xs">目前尚無盤點資產數據，請先載入或匯入客戶資料。</div>`;
@@ -2226,7 +2256,69 @@
             const planContainer = document.getElementById('aiPlanningContainer');
             const dlBody = document.getElementById('patchDownloadTableBody');
 
-            // 1. 優先讀取 Turso 雲端快取 (非強制重新分析時)
+            // 1. 先從當前月份 allData 完整統計「所有不重複軟體」(保證 100% 列出每一套軟體)
+            const currentMonthData = allData.filter(d => String(d['月份']) === month);
+            const swMap = {};
+            currentMonthData.forEach(d => {
+                const name = String(d['資產名稱'] || '').trim();
+                if (!name || name === '未知軟體' || name === '資產名稱') return;
+                const cvss = parseFloat(d['CVE風險指數(3.x)']) || 0;
+                const cveCnt = parseInt(d['CVE弱點數量']) || 0;
+                const ver = String(d['資產版本'] || '').trim();
+
+                if (!swMap[name]) {
+                    swMap[name] = {
+                        name,
+                        vendor: (d['資產廠商'] && d['資產廠商'] !== '未知廠商') ? d['資產廠商'] : guessVendorFromName(name),
+                        versions: new Set(),
+                        count: 0,
+                        vulnCount: 0,
+                        maxCvss: 0
+                    };
+                }
+                swMap[name].count++;
+                if (ver) swMap[name].versions.add(ver);
+                if (cveCnt > 0 || cvss > 0) swMap[name].vulnCount++;
+                swMap[name].maxCvss = Math.max(swMap[name].maxCvss, cvss);
+            });
+
+            // 依「是否具弱點 -> 最高風險分數 -> 裝機台數」排序
+            const allSoftwareList = Object.values(swMap).sort((a, b) => {
+                if ((b.vulnCount > 0) !== (a.vulnCount > 0)) return (b.vulnCount > 0) ? 1 : -1;
+                if (b.maxCvss !== a.maxCvss) return b.maxCvss - a.maxCvss;
+                return b.count - a.count;
+            });
+
+            if (allSoftwareList.length === 0) {
+                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無軟體盤點記錄。</div>`;
+                dlBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono">當期無軟體資產記錄</td></tr>`;
+                return;
+            }
+
+            // 建立「全部軟體下載基底清單」，確保無論 AI 狀態為何，表格必定列出全部軟體
+            const buildBaseDownloads = (aiDownloadsMap = {}) => {
+                return allSoftwareList.map(sw => {
+                    const verList = Array.from(sw.versions);
+                    const verDisplay = verList.length > 2 ? `${verList[0]} 等 ${verList.length} 版本` : (verList.join(', ') || '多版本');
+                    const aiMatch = aiDownloadsMap[sw.name.toLowerCase().trim()];
+                    return {
+                        software: sw.name,
+                        vendor: aiMatch?.vendor || sw.vendor,
+                        current_version: verDisplay,
+                        recommended_version: aiMatch?.recommended_version || (sw.vulnCount > 0 ? `請更新至官方最新安全版 (CVSS ${sw.maxCvss})` : '無已知高危弱點 (維持最新即可)'),
+                        download_url: aiMatch?.download_url || buildOfficialSearchUrl(sw.name),
+                        count: sw.count,
+                        maxCvss: sw.maxCvss
+                    };
+                });
+            };
+
+            // 立刻渲染出「全部軟體清單」，零等待呈現所有軟體
+            const initialDownloads = buildBaseDownloads();
+            document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${initialDownloads.length} 套不重複軟體）`;
+            renderAIDownloads(initialDownloads);
+
+            // 2. 檢查 Turso 快取 (僅在快取數量完整且非強制更新時使用)
             if (!forceRefresh) {
                 try {
                     const cached = await executeTursoSQL(
@@ -2238,98 +2330,69 @@
                     if (cached && cached.length > 0) {
                         const planData = JSON.parse(cached[0].planning_json);
                         const dlData = JSON.parse(cached[0].downloads_json);
-                        document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（快取更新時間：${cached[0].updated_at}）`;
-                        document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體載點（共 ${dlData.length} 項，快取時間：${cached[0].updated_at}）`;
-                        renderAIPlanning(planData);
-                        renderAIDownloads(dlData);
-                        return;
+                        // 防止舊的「單一筆」快取蓋掉全清單
+                        if (planData.length > 0 && dlData.length >= Math.min(allSoftwareList.length, 5)) {
+                            const aiMap = {};
+                            dlData.forEach(d => { if (d.software) aiMap[d.software.toLowerCase().trim()] = d; });
+                            const merged = buildBaseDownloads(aiMap);
+                            document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（快取時間：${cached[0].updated_at}）`;
+                            document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${merged.length} 套，已整合 AI 建議版本）`;
+                            renderAIPlanning(planData);
+                            renderAIDownloads(merged);
+                            return;
+                        }
                     }
                 } catch (e) {
                     console.warn("讀取 AI 快取略過:", e);
                 }
             }
 
-            // 2. 提取當前月份「所有」軟體資產（包含所有存在弱點與無弱點之全部納管軟體，不設筆數上限）
-            const currentMonthData = allData.filter(d => String(d['月份']) === month);
-            const swMap = {};
-            currentMonthData.forEach(d => {
-                const name = String(d['資產名稱'] || '').trim();
-                if (!name || name === '未知軟體') return;
-                const cvss = parseFloat(d['CVE風險指數(3.x)']) || 0;
-                const cveCnt = parseInt(d['CVE弱點數量']) || 0;
-                if (!swMap[name]) {
-                    swMap[name] = {
-                        name,
-                        vendor: d['資產廠商'] || '未知廠商',
-                        version: d['資產版本'] || '多版本',
-                        count: 0,
-                        vulnCount: 0,
-                        maxCvss: 0
-                    };
-                }
-                swMap[name].count++;
-                if (cveCnt > 0 || cvss > 0) swMap[name].vulnCount++;
-                swMap[name].maxCvss = Math.max(swMap[name].maxCvss, cvss);
-            });
+            // 3. 呼叫 Groq AI 針對前 15 大重點弱點軟體生成「修補規劃」與「精準版本號」
+            const topSoftware = allSoftwareList.filter(s => s.vulnCount > 0).slice(0, 15).map(s => ({
+                name: s.name,
+                version: Array.from(s.versions)[0] || '多版本',
+                count: s.count,
+                maxCvss: s.maxCvss
+            }));
 
-            // 依「是否具弱點 -> 最高風險分數 -> 裝機台數」排序，列出全部軟體
-            const allSoftwareList = Object.values(swMap).sort((a, b) => {
-                if ((b.vulnCount > 0) !== (a.vulnCount > 0)) return (b.vulnCount > 0) ? 1 : -1;
-                if (b.maxCvss !== a.maxCvss) return b.maxCvss - a.maxCvss;
-                return b.count - a.count;
-            });
-
-            // 取風險與影響設備最多的前 25 項交由 Groq AI 深度分析與檢索載點，其餘全部軟體自動補齊原廠載點
-            const topSoftware = allSoftwareList.filter(s => s.vulnCount > 0).slice(0, 25);
-
-            if (allSoftwareList.length === 0) {
-                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無軟體盤點記錄。</div>`;
-                dlBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono">當期無軟體資產記錄</td></tr>`;
+            if (topSoftware.length === 0) {
+                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無弱點軟體，維持常態監控即可。</div>`;
                 return;
             }
 
-            // 3. 顯示 AI 運算中動畫
-            planContainer.innerHTML = `<div class="p-8 text-center text-cyan-400 font-mono text-xs"><i class="fa-solid fa-microchip fa-spin mr-2 text-base"></i> Groq Llama-3.3-70b 正在為【${comp}】生成 ${month} 月份專屬修補規劃與官方載點...</div>`;
-            dlBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-cyan-400 font-mono text-xs"><i class="fa-solid fa-spinner fa-spin mr-2"></i> AI 正在檢索原廠最新修補版本與官方載點...</td></tr>`;
+            planContainer.innerHTML = `<div class="p-8 text-center text-cyan-400 font-mono text-xs"><i class="fa-solid fa-microchip fa-spin mr-2 text-base"></i> Groq AI 正在為【${comp}】分析前 ${topSoftware.length} 項重點弱點軟體並生成修補規劃...</div>`;
 
             try {
-                let aiResult = { planning: [], downloads: [] };
-                if (topSoftware.length > 0) {
-                    const groqApiKey = await getGroqApiKeyFromTurso();
-
-                const systemPrompt = "你是一位精通台灣企業與醫療資安防護、神網(SmartWeb)端點派送與 CVE 弱點修補的資深系統顧問。你必須嚴格輸出合法的純 JSON 物件，不可包含任何 Markdown 語法或額外說明文字。所有內容請使用繁體中文。";
-
+                const groqApiKey = await getGroqApiKeyFromTurso();
+                const systemPrompt = "你是一位精通台灣企業與醫療資安防護、神網(SmartWeb)端點派送與 CVE 弱點修補的資深系統顧問。請嚴格輸出合法的純 JSON 物件，不可包含 Markdown 語法。所有內容使用繁體中文。";
                 const userPrompt = `
-客戶機構：${comp}
-機構型態：${orgContext}
+客戶機構：${comp}（${orgContext}）
 盤點月份：${month} 月
-高風險弱點軟體清單（依影響設備數排序）：
+重點弱點軟體清單：
 ${JSON.stringify(topSoftware)}
 
-請根據上述軟體清單，輸出以下結構的 JSON 物件：
+請輸出 JSON：
 {
   "planning": [
     {
       "tier": "第一梯次：自動化離峰派送" 或 "第二梯次：實機測試後排程" 或 "第三梯次：VLAN隔離與白名單",
-      "software": "軟體名稱",
-      "affected_count": 影響台數數字,
+      "software": "軟體名稱（必須與輸入完全一致）",
+      "affected_count": 影響台數,
       "max_cvss": 最高風險分數,
-      "strategy": "針對${comp}業務環境的具體修補策略與相容性風險提示",
-      "deploy_command": "神網(SmartWeb)派送或靜默安裝參數建議（例如 msiexec /qn 或官方更新指令）"
+      "strategy": "具體修補策略與相容性注意事項",
+      "deploy_command": "神網(SmartWeb)或靜默安裝參數建議"
     }
   ],
   "downloads": [
     {
-      "software": "軟體名稱",
-      "vendor": "原廠公司名稱",
-      "current_version": "盤點到的舊版本",
+      "software": "軟體名稱（必須與輸入完全一致）",
+      "vendor": "原廠名稱",
       "recommended_version": "最新安全修補版本號",
-      "download_url": "原廠官方下載主頁或 Microsoft Update Catalog 搜尋網址（請提供真實有效的官方入口網址）"
+      "download_url": "原廠官方下載主頁或 Microsoft Update Catalog 網址"
     }
   ]
 }`;
 
-                // 自動偵測帳號可用之最佳 Groq 模型 (避免模型下架或權限異動造成 404)
                 let selectedModel = "llama-3.1-8b-instant";
                 try {
                     const modelsResp = await fetch("https://api.groq.com/openai/v1/models", {
@@ -2338,26 +2401,15 @@ ${JSON.stringify(topSoftware)}
                     if (modelsResp.ok) {
                         const modelsData = await modelsResp.json();
                         const availableIds = (modelsData.data || []).map(m => m.id);
-                        const preferredOrder = [
-                            "llama-3.3-70b-versatile",
-                            "openai/gpt-oss-120b",
-                            "qwen/qwen3-32b",
-                            "llama-3.1-70b-versatile",
-                            "llama-3.1-8b-instant",
-                            "gemma2-9b-it"
-                        ];
+                        const preferredOrder = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"];
                         const matched = preferredOrder.find(id => availableIds.includes(id));
-                        if (matched) {
-                            selectedModel = matched;
-                        } else if (availableIds.length > 0) {
-                            // 排除 whisper 語音模型，挑選第一個可用文字模型
+                        if (matched) selectedModel = matched;
+                        else {
                             const textModel = availableIds.find(id => !id.includes("whisper") && !id.includes("guard"));
                             if (textModel) selectedModel = textModel;
                         }
                     }
-                } catch (modelErr) {
-                    console.warn("查詢 Groq 可用模型清單失敗，使用預設模型:", modelErr);
-                }
+                } catch (e) {}
 
                 const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
@@ -2382,48 +2434,32 @@ ${JSON.stringify(topSoftware)}
                     throw new Error(`Groq API 錯誤 (${response.status}): ${errBody}`);
                 }
 
-                    const resData = await response.json();
-                    aiResult = JSON.parse(resData.choices[0].message.content);
-                }
+                const resData = await response.json();
+                const aiResult = JSON.parse(resData.choices[0].message.content);
 
-                // 確保「所有弱點軟體」皆完整列於軟體修補下載清單中
-                const aiDownloads = aiResult.downloads || [];
-                const aiCoveredNames = new Set(aiDownloads.map(d => (d.software || '').toLowerCase().trim()));
-                const fullDownloadsList = [...aiDownloads];
-
-                allSoftwareList.forEach(sw => {
-                    if (!aiCoveredNames.has(sw.name.toLowerCase().trim())) {
-                        const isMs = /microsoft|windows|office|edge|\.net|visual c\+\+/i.test(sw.name);
-                        const fallbackUrl = isMs
-                            ? `https://www.catalog.update.microsoft.com/Search.aspx?q=${encodeURIComponent(sw.name)}`
-                            : `https://www.google.com/search?q=${encodeURIComponent(sw.name + ' 官方下載 最新版本')}`;
-                        fullDownloadsList.push({
-                            software: sw.name,
-                            vendor: sw.vendor || '原廠/開發商',
-                            current_version: sw.version,
-                            recommended_version: sw.vulnCount > 0 ? '請參閱原廠最新安全版' : '目前無已知高危弱點 (維持最新即可)',
-                            download_url: fallbackUrl
-                        });
-                    }
+                const aiMap = {};
+                (aiResult.downloads || []).forEach(d => {
+                    if (d.software) aiMap[d.software.toLowerCase().trim()] = d;
                 });
 
-                // 4. 寫入 Turso 快取表
+                const fullMergedDownloads = buildBaseDownloads(aiMap);
+
+                // 寫入 Turso 快取表
                 await executeTursoSQL(
                     `INSERT OR REPLACE INTO sys_ai_remediation_cache (cache_key, company_name, data_month, planning_json, downloads_json, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now', '+8 hours'));`,
-                    [cacheKey, comp, month, JSON.stringify(aiResult.planning || []), JSON.stringify(fullDownloadsList)],
+                    [cacheKey, comp, month, JSON.stringify(aiResult.planning || []), JSON.stringify(fullMergedDownloads)],
                     CENTRAL_DB_URL,
                     CENTRAL_AUTH_TOKEN
                 );
 
-                document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份弱點資產（AI 即時生成完成）`;
-                document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體載點（共 ${fullDownloadsList.length} 項軟體）`;
+                document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（AI 分析完成）`;
+                document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${fullMergedDownloads.length} 套軟體）`;
                 renderAIPlanning(aiResult.planning || []);
-                renderAIDownloads(fullDownloadsList);
+                renderAIDownloads(fullMergedDownloads);
 
             } catch (err) {
                 console.error("Groq AI 分析失敗:", err);
-                planContainer.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-mono">⚠️ AI 分析執行失敗：${err.message}</div>`;
-                dlBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400 font-mono">載點生成失敗，請確認 Turso 中的 GROQ_API_KEY 設定</td></tr>`;
+                planContainer.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-mono">⚠️ AI 修補規劃生成失敗：${err.message}</div>`;
             }
         }
 
