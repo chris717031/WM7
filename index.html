@@ -469,7 +469,7 @@
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 border-b border-slate-800 pb-3 gap-3">
                         <div>
                             <h2 class="text-base font-bold text-slate-100 flex items-center">
-                                <i class="fa-solid fa-cloud-arrow-down text-emerald-400 mr-2"></i> 端點高風險軟體修補與原廠載點
+                                <i class="fa-solid fa-cloud-arrow-down text-emerald-400 mr-2"></i> 端點全部軟體修補與原廠載點 (全清單)
                             </h2>
                             <p id="aiDownloadSubtitle" class="text-[11px] text-slate-400 mt-0.5 font-mono">AI 自動檢索最新安全修補版本與原廠官方下載入口</p>
                         </div>
@@ -2239,7 +2239,7 @@
                         const planData = JSON.parse(cached[0].planning_json);
                         const dlData = JSON.parse(cached[0].downloads_json);
                         document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（快取更新時間：${cached[0].updated_at}）`;
-                        document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份高風險軟體載點（快取時間：${cached[0].updated_at}）`;
+                        document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體載點（共 ${dlData.length} 項，快取時間：${cached[0].updated_at}）`;
                         renderAIPlanning(planData);
                         renderAIDownloads(dlData);
                         return;
@@ -2249,23 +2249,42 @@
                 }
             }
 
-            // 2. 提取當前月份高風險軟體 TOP 12
-            const currentMonthData = allData.filter(d => String(d['月份']) === month && (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0);
+            // 2. 提取當前月份「所有」軟體資產（包含所有存在弱點與無弱點之全部納管軟體，不設筆數上限）
+            const currentMonthData = allData.filter(d => String(d['月份']) === month);
             const swMap = {};
             currentMonthData.forEach(d => {
-                const name = d['資產名稱'] || '未知軟體';
+                const name = String(d['資產名稱'] || '').trim();
+                if (!name || name === '未知軟體') return;
+                const cvss = parseFloat(d['CVE風險指數(3.x)']) || 0;
+                const cveCnt = parseInt(d['CVE弱點數量']) || 0;
                 if (!swMap[name]) {
-                    swMap[name] = { name, version: d['資產版本'] || '多版本', count: 0, maxCvss: 0 };
+                    swMap[name] = {
+                        name,
+                        vendor: d['資產廠商'] || '未知廠商',
+                        version: d['資產版本'] || '多版本',
+                        count: 0,
+                        vulnCount: 0,
+                        maxCvss: 0
+                    };
                 }
                 swMap[name].count++;
-                swMap[name].maxCvss = Math.max(swMap[name].maxCvss, parseFloat(d['CVE風險指數(3.x)']) || 0);
+                if (cveCnt > 0 || cvss > 0) swMap[name].vulnCount++;
+                swMap[name].maxCvss = Math.max(swMap[name].maxCvss, cvss);
             });
 
-            const topSoftware = Object.values(swMap).sort((a, b) => b.count - a.count).slice(0, 12);
+            // 依「是否具弱點 -> 最高風險分數 -> 裝機台數」排序，列出全部軟體
+            const allSoftwareList = Object.values(swMap).sort((a, b) => {
+                if ((b.vulnCount > 0) !== (a.vulnCount > 0)) return (b.vulnCount > 0) ? 1 : -1;
+                if (b.maxCvss !== a.maxCvss) return b.maxCvss - a.maxCvss;
+                return b.count - a.count;
+            });
 
-            if (topSoftware.length === 0) {
-                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無高風險 (CVSS >= 7.0) 弱點軟體，維持常態監控即可。</div>`;
-                dlBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono">當期無需緊急修補之高風險軟體</td></tr>`;
+            // 取風險與影響設備最多的前 25 項交由 Groq AI 深度分析與檢索載點，其餘全部軟體自動補齊原廠載點
+            const topSoftware = allSoftwareList.filter(s => s.vulnCount > 0).slice(0, 25);
+
+            if (allSoftwareList.length === 0) {
+                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無軟體盤點記錄。</div>`;
+                dlBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono">當期無軟體資產記錄</td></tr>`;
                 return;
             }
 
@@ -2274,7 +2293,9 @@
             dlBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-cyan-400 font-mono text-xs"><i class="fa-solid fa-spinner fa-spin mr-2"></i> AI 正在檢索原廠最新修補版本與官方載點...</td></tr>`;
 
             try {
-                const groqApiKey = await getGroqApiKeyFromTurso();
+                let aiResult = { planning: [], downloads: [] };
+                if (topSoftware.length > 0) {
+                    const groqApiKey = await getGroqApiKeyFromTurso();
 
                 const systemPrompt = "你是一位精通台灣企業與醫療資安防護、神網(SmartWeb)端點派送與 CVE 弱點修補的資深系統顧問。你必須嚴格輸出合法的純 JSON 物件，不可包含任何 Markdown 語法或額外說明文字。所有內容請使用繁體中文。";
 
@@ -2351,6 +2372,7 @@ ${JSON.stringify(topSoftware)}
                             { role: "user", content: userPrompt }
                         ],
                         temperature: 0.2,
+                        max_tokens: 4096,
                         response_format: { type: "json_object" }
                     })
                 });
@@ -2360,21 +2382,43 @@ ${JSON.stringify(topSoftware)}
                     throw new Error(`Groq API 錯誤 (${response.status}): ${errBody}`);
                 }
 
-                const resData = await response.json();
-                const aiResult = JSON.parse(resData.choices[0].message.content);
+                    const resData = await response.json();
+                    aiResult = JSON.parse(resData.choices[0].message.content);
+                }
+
+                // 確保「所有弱點軟體」皆完整列於軟體修補下載清單中
+                const aiDownloads = aiResult.downloads || [];
+                const aiCoveredNames = new Set(aiDownloads.map(d => (d.software || '').toLowerCase().trim()));
+                const fullDownloadsList = [...aiDownloads];
+
+                allSoftwareList.forEach(sw => {
+                    if (!aiCoveredNames.has(sw.name.toLowerCase().trim())) {
+                        const isMs = /microsoft|windows|office|edge|\.net|visual c\+\+/i.test(sw.name);
+                        const fallbackUrl = isMs
+                            ? `https://www.catalog.update.microsoft.com/Search.aspx?q=${encodeURIComponent(sw.name)}`
+                            : `https://www.google.com/search?q=${encodeURIComponent(sw.name + ' 官方下載 最新版本')}`;
+                        fullDownloadsList.push({
+                            software: sw.name,
+                            vendor: sw.vendor || '原廠/開發商',
+                            current_version: sw.version,
+                            recommended_version: sw.vulnCount > 0 ? '請參閱原廠最新安全版' : '目前無已知高危弱點 (維持最新即可)',
+                            download_url: fallbackUrl
+                        });
+                    }
+                });
 
                 // 4. 寫入 Turso 快取表
                 await executeTursoSQL(
                     `INSERT OR REPLACE INTO sys_ai_remediation_cache (cache_key, company_name, data_month, planning_json, downloads_json, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now', '+8 hours'));`,
-                    [cacheKey, comp, month, JSON.stringify(aiResult.planning || []), JSON.stringify(aiResult.downloads || [])],
+                    [cacheKey, comp, month, JSON.stringify(aiResult.planning || []), JSON.stringify(fullDownloadsList)],
                     CENTRAL_DB_URL,
                     CENTRAL_AUTH_TOKEN
                 );
 
-                document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（AI 即時生成完成）`;
-                document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份高風險軟體載點（AI 即時生成完成）`;
+                document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份弱點資產（AI 即時生成完成）`;
+                document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體載點（共 ${fullDownloadsList.length} 項軟體）`;
                 renderAIPlanning(aiResult.planning || []);
-                renderAIDownloads(aiResult.downloads || []);
+                renderAIDownloads(fullDownloadsList);
 
             } catch (err) {
                 console.error("Groq AI 分析失敗:", err);
