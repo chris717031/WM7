@@ -1596,7 +1596,7 @@
                     }
                 }
 
-                // 優先查詢 資料年月 (支援跨年度同月份不混淆)；若資料表尚未新增 資料年月 欄位，自動相容降級查詢 月份
+                // 優先查詢 資料年月；若尚未回填資料年月(查無非空值)或欄位尚未建立，自動相容降級查詢 "月份"
                 let periodRows = [];
                 let hasDataPeriodCol = true;
                 try {
@@ -1604,6 +1604,9 @@
                     periodRows = await executeTursoSQL(periodSql, [targetComp, targetComp, ...unitFilterArgs]);
                 } catch (colErr) {
                     hasDataPeriodCol = false;
+                }
+
+                if (!periodRows || periodRows.length === 0) {
                     const monthSql = `SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN ('份', '月份') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause};`;
                     periodRows = await executeTursoSQL(monthSql, [targetComp, targetComp, ...unitFilterArgs]);
                 }
@@ -1638,7 +1641,7 @@
                     let dataSql = '';
                     let dataArgs = [];
                     if (hasDataPeriodCol) {
-                        dataSql = `SELECT * FROM endpoint_software_assets WHERE (資料年月 = ? OR (資料年月 IS NULL AND ("月份" = ? OR "月份" = ? OR "月份" = ?))) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause}`;
+                        dataSql = `SELECT * FROM endpoint_software_assets WHERE (資料年月 = ? OR ((資料年月 IS NULL OR 資料年月 = '') AND ("月份" = ? OR "月份" = ? OR "月份" = ?))) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause}`;
                         dataArgs = [ym, mShort, mShort + '.0', mShort + '月', targetComp, targetComp, ...unitFilterArgs];
                     } else {
                         dataSql = `SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause}`;
