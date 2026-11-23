@@ -1489,10 +1489,12 @@
                 fullDept = fullDept.replace(rule.reg, rule.rep);
             });
 
-            if (cat === '未知' || !cat) {
+            const driverRegex = /driver|驅動|intel\(r\)|realtek|nvidia|amd software|bluetooth|audio|display|chipset|wireless|wlan|lan|ethernet|usb|printer|scanner|synaptics|elan|touchpad/i;
+            if (cat === '驅動' || cat === '驅動相關' || (cat !== '驅動程式' && driverRegex.test(assetName) && !/microsoft office|visual studio|sql server/i.test(assetName))) {
+                cat = '驅動程式';
+            } else if (cat === '未知' || !cat) {
                 if (/microsoft|office|windows|edge|\.net|visual c\+\+/i.test(assetName)) cat = '微軟類';
                 else if (/701server|701client|oracle|sap|sas|adobe/i.test(assetName)) cat = '版權軟體';
-                else if (/driver|intel\(r\)|realtek|nvidia/i.test(assetName)) cat = '驅動程式';
                 else cat = '免費軟體';
             }
 
@@ -1667,7 +1669,14 @@
                 branchSelect.innerHTML = '<option value="ALL">全部 (All Units)</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
             }
 
-            categorySelect.innerHTML = '<option value="ALL">全部類別 (All Categories)</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            const prevCat = categorySelect.value;
+            const mergedCategories = [...new Set([...categories, '驅動程式'])].filter(Boolean).sort((a, b) => {
+                if (a === '驅動程式') return 1;
+                if (b === '驅動程式') return -1;
+                return a.localeCompare(b, 'zh-TW');
+            });
+            categorySelect.innerHTML = '<option value="ALL">全部類別 (All Categories)</option>' + mergedCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+            if (prevCat && mergedCategories.includes(prevCat)) categorySelect.value = prevCat;
 
             const pNew = document.getElementById('patchNewMonth');
             const pOld = document.getElementById('patchOldMonth');
@@ -2267,11 +2276,14 @@
                 const rawPc = mPc ? String(row[mPc] || '').trim() : `DEVICE-${idx + 1}`;
                 let rawCat = mCat ? String(row[mCat] || '').trim() : '';
 
-                if (!rawCat) {
-                    if (/microsoft|office|windows|edge|\.net|visual c\+\+/i.test(rawName)) rawCat = '微軟類';
+                const importDriverRegex = /driver|驅動|intel|realtek|nvidia|amd|bluetooth|audio|display|chipset|wireless|wlan|lan|usb|printer|scanner/i;
+                if (!rawCat || rawCat === '未知') {
+                    if (importDriverRegex.test(rawName) && !/microsoft office|visual studio|sql server/i.test(rawName)) rawCat = '驅動程式';
+                    else if (/microsoft|office|windows|edge|\.net|visual c\+\+/i.test(rawName)) rawCat = '微軟類';
                     else if (/701|oracle|sap|adobe|autocad/i.test(rawName)) rawCat = '版權軟體';
-                    else if (/driver|intel|realtek|nvidia/i.test(rawName)) rawCat = '驅動程式';
                     else rawCat = '免費軟體';
+                } else if (rawCat === '驅動' || rawCat === '驅動相關') {
+                    rawCat = '驅動程式';
                 }
 
                 return {
