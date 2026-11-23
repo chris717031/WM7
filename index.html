@@ -47,6 +47,34 @@
         </div>
     </div>
 
+    <!-- ================= 匯入重複月份防呆確認 Modal ================= -->
+    <div id="duplicateMonthModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card rounded-2xl p-6 max-w-md w-full mx-4 border border-amber-500/50 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-amber-300 flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-2"></i> 偵測到重複月份資料 (防呆確認)
+                </h3>
+                <button onclick="closeDuplicateMonthModal()" class="text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <div id="duplicateMonthSummary" class="text-xs text-slate-300 space-y-2 mb-5 font-sans leading-relaxed">
+                正在檢查雲端資料庫狀態...
+            </div>
+            <div class="space-y-2.5 font-mono text-xs">
+                <button onclick="executeTursoWriteWithMode('OVERWRITE')" class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition flex items-center justify-between shadow-lg">
+                    <span><i class="fa-solid fa-rotate mr-2"></i>1. 清除該月舊資料並完整覆蓋 (推薦)</span>
+                    <span class="text-[10px] bg-amber-800/80 px-2 py-0.5 rounded">修正報表</span>
+                </button>
+                <button onclick="executeTursoWriteWithMode('APPEND')" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-cyan-300 font-semibold transition flex items-center justify-between">
+                    <span><i class="fa-solid fa-plus mr-2"></i>2. 保留舊資料，僅追加不重複項目</span>
+                    <span class="text-[10px] bg-slate-900 px-2 py-0.5 rounded">分批匯入</span>
+                </button>
+                <button onclick="closeDuplicateMonthModal()" class="w-full py-2 px-4 rounded-xl bg-transparent hover:bg-slate-900 text-slate-400 hover:text-white transition text-center">
+                    取消寫入
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -443,18 +471,25 @@
                 </div>
             </div>
 
-            <!-- 頁面 2：修補分析 -->
+            <!-- 頁面 2：數據比對 (含共同在線設備基準防誤差機制) -->
             <div id="view-patch" class="hidden space-y-8">
                 <div class="glass-card rounded-2xl p-6">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-800/80 pb-4 mb-5 gap-3">
+                    <div class="flex flex-col lg:flex-row justify-between lg:items-center border-b border-slate-800/80 pb-4 mb-5 gap-3">
                         <div>
                             <h2 class="text-base font-bold text-slate-100 flex items-center">
                                 <i class="fa-solid fa-code-compare text-emerald-400 mr-2.5"></i>
                                 端點軟體資產與弱點月度數據比對戰情
                             </h2>
-                            <p class="text-xs text-slate-400 mt-0.5">追蹤跨月度弱點軟體處置成效與消長差額</p>
+                            <p class="text-xs text-slate-400 mt-0.5">採用「共同在線設備基準」排除離線未開機設備造成的假性修復誤差</p>
                         </div>
-                        <div class="flex items-center gap-3 font-mono text-xs">
+                        <div class="flex flex-wrap items-center gap-3 font-mono text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400">比對基準:</span>
+                                <select id="patchBaselineMode" class="bg-slate-900 border border-emerald-500/50 rounded-lg px-2.5 py-1 text-emerald-300 focus:outline-none" onchange="runPatchAnalysis()">
+                                    <option value="COMMON_ONLINE" selected>共同在線設備基準 (排除離線誤判)</option>
+                                    <option value="ALL_DEVICES">全部回報設備 (含離線/新上線差異)</option>
+                                </select>
+                            </div>
                             <div class="flex items-center gap-2">
                                 <span class="text-slate-400">當期(新月份):</span>
                                 <select id="patchNewMonth" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-cyan-300 focus:outline-none" onchange="runPatchAnalysis()"></select>
@@ -466,9 +501,33 @@
                         </div>
                     </div>
 
+                    <!-- 共同在線設備基準遙測列 -->
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/90 font-mono text-xs">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block">前期在線設備</span>
+                            <span id="statOldOnlineDevices" class="text-sm font-bold text-slate-200">0 台</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block">當期在線設備</span>
+                            <span id="statNewOnlineDevices" class="text-sm font-bold text-cyan-300">0 台</span>
+                        </div>
+                        <div class="border-l border-slate-800 pl-3">
+                            <span class="text-[10px] text-emerald-400 block">共同在線基準 (交集)</span>
+                            <span id="statCommonOnlineDevices" class="text-sm font-bold text-emerald-300">0 台</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-amber-400 block">當期離線/未回報 (已排除)</span>
+                            <span id="statOfflineExcludedDevices" class="text-sm font-bold text-amber-300">0 台</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-indigo-400 block">當期新納管/新上線</span>
+                            <span id="statNewlyOnlineDevices" class="text-sm font-bold text-indigo-300">0 台</span>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
-                            <p class="text-[11px] font-semibold text-slate-400 font-mono">前期未修復軟體</p>
+                            <p class="text-[11px] font-semibold text-slate-400 font-mono">前期未修復軟體 (基準內)</p>
                             <h3 class="text-2xl font-bold text-slate-200 mt-1 font-mono"><span id="kpiPatchOldUnrepaired">0</span> 項</h3>
                         </div>
                         <div class="bg-slate-900/90 p-4 rounded-xl border border-rose-500/30">
@@ -476,7 +535,7 @@
                             <h3 class="text-2xl font-bold text-rose-400 mt-1 font-mono"><span id="kpiPatchAdded">0</span> 項</h3>
                         </div>
                         <div class="bg-slate-900/90 p-4 rounded-xl border border-emerald-500/30">
-                            <p class="text-[11px] font-semibold text-emerald-400 font-mono">本月完成修復</p>
+                            <p class="text-[11px] font-semibold text-emerald-400 font-mono">本月真實完成修復</p>
                             <h3 class="text-2xl font-bold text-emerald-400 mt-1 font-mono"><span id="kpiPatchRepaired">0</span> 項</h3>
                         </div>
                         <div class="bg-slate-900/90 p-4 rounded-xl border border-amber-500/30">
@@ -1938,18 +1997,57 @@
             }
         }
 
+        // 全域保存數據比對遙測結果，供 Copilot 研判同步引用
+        let latestPatchTelemetry = null;
+
         function runPatchAnalysis() {
             const newM = document.getElementById('patchNewMonth').value;
             const oldM = document.getElementById('patchOldMonth').value;
+            const baselineMode = document.getElementById('patchBaselineMode')?.value || 'COMMON_ONLINE';
             if (!newM || !oldM) return;
 
-            const oldData = allData.filter(d => String(d['月份']) === oldM);
-            const newData = allData.filter(d => String(d['月份']) === newM);
+            const rawOldData = allData.filter(d => String(d['月份']) === oldM);
+            const rawNewData = allData.filter(d => String(d['月份']) === newM);
+
+            // 1. 計算前後期在線設備集合 (以電腦名稱正規化比對)
+            const oldDeviceSet = new Set(rawOldData.map(d => String(d['電腦名稱'] || '').trim().toUpperCase()).filter(Boolean));
+            const newDeviceSet = new Set(rawNewData.map(d => String(d['電腦名稱'] || '').trim().toUpperCase()).filter(Boolean));
+
+            const commonDevices = new Set();
+            let offlineDevicesCount = 0;
+            oldDeviceSet.forEach(pc => {
+                if (newDeviceSet.has(pc)) commonDevices.add(pc);
+                else offlineDevicesCount++;
+            });
+
+            let newlyOnlineCount = 0;
+            newDeviceSet.forEach(pc => {
+                if (!oldDeviceSet.has(pc)) newlyOnlineCount++;
+            });
+
+            // 更新設備遙測列
+            document.getElementById('statOldOnlineDevices').innerText = `${oldDeviceSet.size.toLocaleString()} 台`;
+            document.getElementById('statNewOnlineDevices').innerText = `${newDeviceSet.size.toLocaleString()} 台`;
+            document.getElementById('statCommonOnlineDevices').innerText = `${commonDevices.size.toLocaleString()} 台`;
+            document.getElementById('statOfflineExcludedDevices').innerText = `${offlineDevicesCount.toLocaleString()} 台`;
+            document.getElementById('statNewlyOnlineDevices').innerText = `${newlyOnlineCount.toLocaleString()} 台`;
+
+            // 2. 依選定的比對基準過濾分析資料集 (COMMON_ONLINE 僅比對兩期皆在線的共同設備)
+            const oldData = (baselineMode === 'COMMON_ONLINE')
+                ? rawOldData.filter(d => commonDevices.has(String(d['電腦名稱'] || '').trim().toUpperCase()))
+                : rawOldData;
+
+            const newData = (baselineMode === 'COMMON_ONLINE')
+                ? rawNewData.filter(d => commonDevices.has(String(d['電腦名稱'] || '').trim().toUpperCase()))
+                : rawNewData;
 
             const oldHigh = new Map();
-            oldData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => oldHigh.set(`${d['電腦名稱']}_${d['資產名稱']}`, d));
+            oldData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0)
+                   .forEach(d => oldHigh.set(`${String(d['電腦名稱']).trim().toUpperCase()}_${d['資產名稱']}`, d));
+
             const newHigh = new Map();
-            newData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).forEach(d => newHigh.set(`${d['電腦名稱']}_${d['資產名稱']}`, d));
+            newData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0)
+                   .forEach(d => newHigh.set(`${String(d['電腦名稱']).trim().toUpperCase()}_${d['資產名稱']}`, d));
 
             let rep = 0, add = 0;
             oldHigh.forEach((v, k) => { if (!newHigh.has(k)) rep++; });
@@ -1959,6 +2057,21 @@
             document.getElementById('kpiPatchAdded').innerText = add.toLocaleString();
             document.getElementById('kpiPatchRepaired').innerText = rep.toLocaleString();
             document.getElementById('kpiNetProgress').innerText = `${newHigh.size.toLocaleString()} 項`;
+
+            latestPatchTelemetry = {
+                oldMonth: oldM,
+                newMonth: newM,
+                baselineMode,
+                oldOnlineCount: oldDeviceSet.size,
+                newOnlineCount: newDeviceSet.size,
+                commonOnlineCount: commonDevices.size,
+                offlineExcludedCount: offlineDevicesCount,
+                newlyOnlineCount: newlyOnlineCount,
+                oldUnrepaired: oldHigh.size,
+                addedVulns: add,
+                repairedVulns: rep,
+                netRemaining: newHigh.size
+            };
 
             const agg = {};
             oldData.forEach(d => {
@@ -1972,12 +2085,22 @@
                 if ((parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0) agg[n].cur++;
             });
 
-            const diffList = Object.values(agg).slice(0, 20);
+            // 依變動幅度與累積數量排序前 30 項重點弱點軟體
+            const diffList = Object.values(agg)
+                .filter(item => item.old > 0 || item.cur > 0)
+                .sort((a, b) => (Math.abs(b.cur - b.old) + b.cur) - (Math.abs(a.cur - a.old) + a.cur))
+                .slice(0, 30);
+
             const tbody = document.getElementById('patchDiffTableBody');
             tbody.innerHTML = '';
+            if (diffList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500 font-mono">在共同在線設備基準下無高風險軟體消長差異</td></tr>';
+                return;
+            }
+
             diffList.forEach(item => {
                 const dAdd = item.cur > item.old ? item.cur - item.old : 0;
-                const dRep = item.old > item.cur ? item.old - item.old : 0;
+                const dRep = item.old > item.cur ? item.old - item.cur : 0;
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-800/40 transition">
                         <td class="py-2.5 px-4 font-mono font-medium text-slate-200">${item.name}</td>
@@ -2197,26 +2320,94 @@
             alert(`✅ 解析成功！檔名辨識月份為【${applyMonth} 月】，共轉換【${sanitized.length.toLocaleString()}】筆資料，請點擊上方綠色按鈕【寫入 Turso】同步至雲端。`);
         }
 
+        // ========================================================
+        // 匯入重複月份防呆機制 (檢查雲端是否已有同月資料並提供覆蓋/追加選項)
+        // ========================================================
+        function closeDuplicateMonthModal() {
+            document.getElementById('duplicateMonthModal').classList.add('hidden');
+        }
+
         async function pushNewRowsToTurso() {
             if (!newlyImportedRawRows.length) {
                 alert("目前沒有待寫入的資料！");
                 return;
             }
+
             const btn = document.getElementById('btnPushToCloud');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 寫入中...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 檢查重複月份中...';
 
             const currentComp = currentUser.company_name || '台灣電力股份有限公司';
-
-            const INSERT_SQL = `
-            INSERT OR IGNORE INTO endpoint_software_assets (
-                company_name, "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
-                "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
-                "CVE風險指數(3.x)", "CVE弱點數量"
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
-            `;
+            const targetMonth = String(newlyImportedRawRows[0]['月份'] || '').trim();
 
             try {
+                // 查詢 Turso 資料庫中該客戶該月份是否已存在資料
+                const checkRows = await executeTursoSQL(
+                    `SELECT COUNT(*) AS cnt FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
+                    [targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
+                    ACTIVE_DB_URL,
+                    ACTIVE_AUTH_TOKEN
+                );
+
+                const existingCount = parseInt(checkRows[0]?.cnt || 0, 10);
+
+                if (existingCount > 0) {
+                    // 發現重複月份資料 -> 彈出防呆確認視窗讓管理者選擇「完整覆蓋」或「僅追加」
+                    document.getElementById('duplicateMonthSummary').innerHTML = `
+                        <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1.5">
+                            <div>• 客戶對象：<span class="text-amber-300 font-bold">${currentComp}</span></div>
+                            <div>• 目標月份：<span class="text-cyan-400 font-bold font-mono">${targetMonth} 月</span></div>
+                            <div>• 雲端現有：<span class="text-rose-400 font-bold font-mono">${existingCount.toLocaleString()}</span> 筆舊資料</div>
+                            <div>• 本次準備：<span class="text-emerald-400 font-bold font-mono">${newlyImportedRawRows.length.toLocaleString()}</span> 筆新資料</div>
+                        </div>
+                        <p class="text-slate-400 text-[11px] pt-1">若您是要修正該月份的錯誤報表，請選擇「清除該月舊資料並完整覆蓋」；若是同一月份分批上傳不同院區/廠區檔案，請選擇「保留舊資料並追加」。</p>
+                    `;
+                    document.getElementById('duplicateMonthModal').classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 ${newlyImportedRawRows.length.toLocaleString()} 筆至 Turso`;
+                    return;
+                }
+
+                // 無重複月份資料 -> 直接執行寫入
+                await executeTursoWriteWithMode('APPEND');
+            } catch (err) {
+                console.error("檢查重複月份失敗:", err);
+                alert(`檢查重複月份時發生異常: ${err.message}`);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1 text-emerald-400"></i> 寫入 ${newlyImportedRawRows.length.toLocaleString()} 筆至 Turso`;
+            }
+        }
+
+        async function executeTursoWriteWithMode(mode) {
+            closeDuplicateMonthModal();
+            if (!newlyImportedRawRows.length) return;
+
+            const btn = document.getElementById('btnPushToCloud');
+            btn.disabled = true;
+
+            const currentComp = currentUser.company_name || '台灣電力股份有限公司';
+            const targetMonth = String(newlyImportedRawRows[0]['月份'] || '').trim();
+
+            try {
+                // 若選擇「完整覆蓋」，先清除該客戶該月份所有舊資料
+                if (mode === 'OVERWRITE') {
+                    btn.innerHTML = `<i class="fa-solid fa-trash-can fa-bounce mr-1 text-amber-400"></i> 正在清除 ${targetMonth} 月舊資料...`;
+                    await executeTursoSQL(
+                        `DELETE FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
+                        [targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
+                        ACTIVE_DB_URL,
+                        ACTIVE_AUTH_TOKEN
+                    );
+                }
+
+                const INSERT_SQL = `
+                INSERT OR IGNORE INTO endpoint_software_assets (
+                    company_name, "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
+                    "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
+                    "CVE風險指數(3.x)", "CVE弱點數量"
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
+                `;
+
                 const batchSize = 300;
                 let successCount = 0;
 
@@ -2266,7 +2457,22 @@
                     btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 已寫入 ${successCount} / ${newlyImportedRawRows.length}...`;
                 }
 
-                alert(`🎉 成功寫入【${currentComp}】共 ${successCount.toLocaleString()} 筆資料至資料庫！`);
+                // 同步清除該客戶該月份的 Copilot 舊快取，確保重新載入後 Copilot 依據最新報表重算
+                try {
+                    const cacheKey = `COPILOT_V2_${currentComp}_${targetMonth}`;
+                    await executeTursoSQL(
+                        `DELETE FROM sys_ai_remediation_cache WHERE cache_key = ?;`,
+                        [cacheKey],
+                        CENTRAL_DB_URL,
+                        CENTRAL_AUTH_TOKEN
+                    );
+                    lastCopilotRunSignature = "";
+                } catch (cacheErr) {
+                    console.warn("清除舊 Copilot 快取略過:", cacheErr);
+                }
+
+                const modeText = (mode === 'OVERWRITE') ? '已清除舊資料並完整覆蓋寫入' : '已追加寫入';
+                alert(`🎉 【${currentComp}】${targetMonth} 月份${modeText}共 ${successCount.toLocaleString()} 筆資料至資料庫！`);
                 btn.classList.add('hidden');
                 newlyImportedRawRows = [];
                 await loadFromTurso();
@@ -2575,9 +2781,10 @@
 - 累計 CVE 弱點總數：${totalVulnSum} 個
 - 弱點數最高前 5 單位：${JSON.stringify(topUnits)}
 
-【跨月數據比對】
+【跨月數據比對（採用共同在線設備基準排除離線誤判）】
 - 前期月份：${prevMonth} 月（高風險記錄 ${prevHighCount} 筆）
 - 當期月份：${month} 月（高風險記錄 ${curHighCount} 筆，增減差額 ${curHighCount - prevHighCount} 筆）
+- 設備在線交集遙測：${latestPatchTelemetry ? `前期在線 ${latestPatchTelemetry.oldOnlineCount} 台、當期在線 ${latestPatchTelemetry.newOnlineCount} 台、共同在線基準 ${latestPatchTelemetry.commonOnlineCount} 台（已排除當期離線未回報 ${latestPatchTelemetry.offlineExcludedCount} 台、新上線 ${latestPatchTelemetry.newlyOnlineCount} 台）；共同基準下真實修復 ${latestPatchTelemetry.repairedVulns} 項、新增弱點 ${latestPatchTelemetry.addedVulns} 項` : '常態比對'}
 
 【重點弱點軟體清單】
 ${JSON.stringify(topSoftware)}
