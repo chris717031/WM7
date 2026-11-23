@@ -262,7 +262,7 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         <div>
-                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">1. 選擇月份 (Data Month)</label>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">1. 選擇資料年月 (Year-Month)</label>
                             <select id="monthFilter" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-cyan-300 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition font-mono" onchange="updateDashboard()">
                                 <option value="LATEST">最新月份 (自動切換)</option>
                             </select>
@@ -293,38 +293,71 @@
                     </div>
                 </div>
 
-                <!-- 3 大核心 KPI -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="glass-card rounded-2xl p-6 relative overflow-hidden group">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">弱點軟體筆數</span>
-                            <span class="p-2 rounded-lg bg-rose-950/60 border border-rose-800/40 text-rose-400"><i class="fa-solid fa-triangle-exclamation"></i></span>
-                        </div>
-                        <h3 id="kpiVulnRecords" class="text-3xl font-extrabold text-rose-400 font-mono mt-3">0</h3>
-                        <p class="text-xs text-slate-400 mt-2 flex items-center">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 mr-2"></span>當期存在弱點之裝機記錄
-                        </p>
-                    </div>
-
-                    <div class="glass-card rounded-2xl p-6 relative overflow-hidden group">
+                <!-- 弱點與端點核心統計指標 (明確區分受影響電腦數、受影響軟體項目數、弱點影響數與高風險電腦數) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-mono uppercase tracking-widest text-slate-400">管理電腦總數</span>
                             <span class="p-2 rounded-lg bg-cyan-950/60 border border-cyan-800/40 text-cyan-400"><i class="fa-solid fa-desktop"></i></span>
                         </div>
-                        <h3 id="kpiUniqueComputers" class="text-3xl font-extrabold text-cyan-300 font-mono mt-3">0</h3>
-                        <p class="text-xs text-slate-400 mt-2 flex items-center">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 mr-2"></span>當期納管獨立端點設備
+                        <h3 id="kpiUniqueComputers" class="text-2xl font-extrabold text-cyan-300 font-mono mt-2.5">0</h3>
+                        <p class="text-[11px] text-slate-400 mt-1.5 flex items-center">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 mr-2"></span>當期不重複電腦名稱總數
                         </p>
                     </div>
 
-                    <div class="glass-card rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">總弱點數量</span>
-                            <span class="p-2 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"><i class="fa-solid fa-shield-virus"></i></span>
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">受影響電腦數</span>
+                            <span class="p-2 rounded-lg bg-amber-950/60 border border-amber-800/40 text-amber-400"><i class="fa-solid fa-computer"></i></span>
                         </div>
-                        <h3 id="kpiTotalVuln" class="text-3xl font-extrabold text-indigo-300 font-mono mt-3">0</h3>
-                        <p class="text-xs text-slate-400 mt-2 flex items-center">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></span>當期累計 CVE 弱點總數
+                        <h3 id="kpiAffectedComputers" class="text-2xl font-extrabold text-amber-300 font-mono mt-2.5">0</h3>
+                        <p class="text-[11px] text-slate-400 mt-1.5 flex items-center">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-2"></span>至少一項軟體具弱點之不重複電腦數
+                        </p>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">高風險受影響電腦數</span>
+                            <span class="p-2 rounded-lg bg-rose-950/60 border border-rose-800/40 text-rose-400"><i class="fa-solid fa-radiation"></i></span>
+                        </div>
+                        <h3 id="kpiHighRiskComputers" class="text-2xl font-extrabold text-rose-400 font-mono mt-2.5">0</h3>
+                        <p class="text-[11px] text-slate-400 mt-1.5 flex items-center">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 mr-2"></span>含 CVSS 3.x &ge; 7.0 軟體之不重複電腦數
+                        </p>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">受影響軟體項目數</span>
+                            <span class="p-2 rounded-lg bg-orange-950/60 border border-orange-800/40 text-orange-400"><i class="fa-solid fa-cubes"></i></span>
+                        </div>
+                        <h3 id="kpiVulnRecords" class="text-2xl font-extrabold text-orange-300 font-mono mt-2.5">0</h3>
+                        <p class="text-[11px] text-slate-400 mt-1.5 flex items-center">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-orange-400 mr-2"></span>符合弱點條件之軟體裝機資料列數
+                        </p>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">弱點影響數 (非不重複 CVE)</span>
+                            <span class="p-2 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400"><i class="fa-solid fa-layer-group"></i></span>
+                        </div>
+                        <h3 id="kpiTotalVuln" class="text-2xl font-extrabold text-indigo-300 font-mono mt-2.5">0</h3>
+                        <p class="text-[11px] text-slate-400 mt-1.5 flex items-center">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></span>各軟體資料列 CVE 數量加總 (弱點影響數)
+                        </p>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono uppercase tracking-widest text-slate-400">不重複 CVE 數</span>
+                            <span class="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300"><i class="fa-solid fa-fingerprint"></i></span>
+                        </div>
+                        <h3 id="kpiUniqueCveCount" class="text-lg font-bold text-slate-300 font-mono mt-3">待補 CVE ID 明細</h3>
+                        <p class="text-[11px] text-slate-400 mt-1.5 flex items-center">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>需建立 CVE ID 明細表方可精算去重 CVE
                         </p>
                     </div>
                 </div>
@@ -1447,15 +1480,40 @@
             });
         }
 
-        // 清洗與遮罩 (徹底剔除 .0)
+        // 清洗與遮罩 (徹底剔除 .0，並建立 資料年度 與 資料年月 避免跨年度同月混淆)
         function sanitizeAndMaskRow(rawRow, defaultYear, defaultMonth) {
+            let rawYearStr = String(rawRow['資料年度'] || rawRow['年度'] || defaultYear || '').trim();
+            let yearMatch = rawYearStr.match(/^(20\d{2})$/);
+            let year = yearMatch ? yearMatch[1] : '';
+
+            let rawPeriodStr = String(rawRow['資料年月'] || '').trim();
+            let periodMatch = rawPeriodStr.match(/^(20\d{2})[-_/](\d{1,2})$/);
+
             let rawMonthStr = String(rawRow['月份'] || rawRow.month || defaultMonth || '').trim();
             let month = '';
             if (rawMonthStr) {
                 let cleanVal = rawMonthStr.replace('月', '').trim();
                 let parsedM = parseFloat(cleanVal);
-                month = !isNaN(parsedM) ? String(Math.floor(parsedM)) : cleanVal;
+                month = (!isNaN(parsedM) && parsedM >= 1 && parsedM <= 12) ? String(Math.floor(parsedM)) : cleanVal;
             }
+
+            if (!year && periodMatch) {
+                year = periodMatch[1];
+            }
+            if (!month && periodMatch) {
+                const pm = parseInt(periodMatch[2], 10);
+                if (pm >= 1 && pm <= 12) month = String(pm);
+            }
+
+            // 若原始資料完全無年度資訊，預設歸屬 2026 (新匯入若缺年度則標記待確認或依預設年)
+            if (!year) {
+                year = rawRow['資料年度'] === '待確認' ? '待確認' : '2026';
+            }
+
+            const validNumMonth = parseInt(month, 10);
+            const dataPeriod = (/^20\d{2}$/.test(year) && !isNaN(validNumMonth) && validNumMonth >= 1 && validNumMonth <= 12)
+                ? `${year}-${String(validNumMonth).padStart(2, '0')}`
+                : (rawPeriodStr || `${year}-${month || '00'}`);
 
             let branch = String(rawRow['院區'] || rawRow.branch || '未分配').trim();
             let fullDept = String(rawRow['完整部門'] || rawRow.full_dept || rawRow.dept || '未分配').trim();
@@ -1502,7 +1560,10 @@
 
             return {
                 company_name: rawRow.company_name || currentUser?.company_name || '臺北市立聯合醫院',
-                月份: month, 電腦名稱: pc, 院區: branch, 完整部門: fullDept, 部門: deptName,
+                資料年度: year,
+                月份: month,
+                資料年月: dataPeriod,
+                電腦名稱: pc, 院區: branch, 完整部門: fullDept, 部門: deptName,
                 IP位址: ip, 軟體類別: cat, 資產名稱: assetName, 資產廠商: vendor, 資產版本: version,
                 'CPE 2.3': cpe23, 'CPE完整名稱': cpeFull,
                 'CVE風險指數(2.0)': cvss2, 'CVE風險指數(3.x)': cvss3, 'CVE弱點數量': cveCount
@@ -1521,27 +1582,41 @@
             syncText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> 同步【${targetComp} - ${targetScope}】數據中...`;
 
             try {
-                let monthSql = `SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN ('份', '月份') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院')) `;
-                let monthArgs = [targetComp, targetComp];
-
+                let unitFilterClause = '';
+                let unitFilterArgs = [];
                 if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
                     const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
                     if (allowedUnits.length === 1) {
-                        monthSql += 'AND "院區" = ? ';
-                        monthArgs.push(allowedUnits[0]);
+                        unitFilterClause = ' AND "院區" = ?';
+                        unitFilterArgs.push(allowedUnits[0]);
                     } else {
                         const placeholders = allowedUnits.map(() => '?').join(',');
-                        monthSql += `AND "院區" IN (${placeholders}) `;
-                        monthArgs.push(...allowedUnits);
+                        unitFilterClause = ` AND "院區" IN (${placeholders})`;
+                        unitFilterArgs.push(...allowedUnits);
                     }
                 }
 
-                const monthRows = await executeTursoSQL(monthSql, monthArgs);
-                availableMonthsList = [...new Set(monthRows.map(r => {
+                // 優先查詢 資料年月 (支援跨年度同月份不混淆)；若資料表尚未新增 資料年月 欄位，自動相容降級查詢 月份
+                let periodRows = [];
+                let hasDataPeriodCol = true;
+                try {
+                    const periodSql = `SELECT DISTINCT 資料年月, "月份" FROM endpoint_software_assets WHERE 資料年月 IS NOT NULL AND 資料年月 != '' AND "月份" NOT IN ('份', '月份') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause} ORDER BY 資料年月 ASC;`;
+                    periodRows = await executeTursoSQL(periodSql, [targetComp, targetComp, ...unitFilterArgs]);
+                } catch (colErr) {
+                    hasDataPeriodCol = false;
+                    const monthSql = `SELECT DISTINCT "月份" FROM endpoint_software_assets WHERE "月份" NOT IN ('份', '月份') AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause};`;
+                    periodRows = await executeTursoSQL(monthSql, [targetComp, targetComp, ...unitFilterArgs]);
+                }
+
+                availableMonthsList = [...new Set(periodRows.map(r => {
+                    if (r['資料年月'] && /^20\d{2}-\d{2}$/.test(String(r['資料年月']).trim())) {
+                        return String(r['資料年月']).trim();
+                    }
                     let m = String(r['月份'] || '').replace('月', '').trim();
                     let p = parseFloat(m);
-                    return isNaN(p) ? m : String(Math.floor(p));
-                }))].filter(Boolean).sort((a, b) => parseInt(a) - parseInt(b));
+                    let mNum = isNaN(p) ? m : String(Math.floor(p));
+                    return mNum ? `2026-${mNum.padStart(2, '0')}` : '';
+                }))].filter(Boolean).sort((a, b) => a.localeCompare(b));
 
                 if (availableMonthsList.length === 0) {
                     syncText.innerHTML = `<span class="text-amber-400">● 客戶【${targetComp}】目前尚無端點資產資料 (請先匯入)</span>`;
@@ -1556,25 +1631,23 @@
                 allData = [];
 
                 for (let i = 0; i < availableMonthsList.length; i++) {
-                    const m = availableMonthsList[i];
-                    let dataSql = `SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))`;
-                    let dataArgs = [m, m + '.0', m + '月', targetComp, targetComp];
+                    const ym = availableMonthsList[i]; // 格式: '2026-11'
+                    const [ymYear, ymMonthRaw] = ym.split('-');
+                    const mShort = String(parseInt(ymMonthRaw, 10));
 
-                    if (currentUser.role !== 'admin' || currentUser.scope_unit !== 'ALL') {
-                        const allowedUnits = currentUser.scope_unit.split(',').map(s => s.trim());
-                        if (allowedUnits.length === 1) {
-                            dataSql += ' AND "院區" = ?';
-                            dataArgs.push(allowedUnits[0]);
-                        } else {
-                            const placeholders = allowedUnits.map(() => '?').join(',');
-                            dataSql += ` AND "院區" IN (${placeholders})`;
-                            dataArgs.push(...allowedUnits);
-                        }
+                    let dataSql = '';
+                    let dataArgs = [];
+                    if (hasDataPeriodCol) {
+                        dataSql = `SELECT * FROM endpoint_software_assets WHERE (資料年月 = ? OR (資料年月 IS NULL AND ("月份" = ? OR "月份" = ? OR "月份" = ?))) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause}`;
+                        dataArgs = [ym, mShort, mShort + '.0', mShort + '月', targetComp, targetComp, ...unitFilterArgs];
+                    } else {
+                        dataSql = `SELECT * FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'))${unitFilterClause}`;
+                        dataArgs = [mShort, mShort + '.0', mShort + '月', targetComp, targetComp, ...unitFilterArgs];
                     }
 
                     const rows = await executeTursoSQL(dataSql, dataArgs);
                     if (rows && rows.length > 0) {
-                        allData = allData.concat(rows.map(r => sanitizeAndMaskRow(r)));
+                        allData = allData.concat(rows.map(r => sanitizeAndMaskRow(r, ymYear, mShort)));
                     }
 
                     if (i === 0) {
@@ -1601,13 +1674,21 @@
             }
         }
 
+        function formatYearMonthLabel(ym) {
+            const match = String(ym || '').match(/^(20\d{2})-(\d{2})$/);
+            if (match) {
+                return `${match[1]}-${match[2]} (${parseInt(match[2], 10)}月)`;
+            }
+            return String(ym || '');
+        }
+
         function populateMonthSelector() {
             const monthSel = document.getElementById('monthFilter');
             const currentSelected = monthSel.value;
             
-            let html = '<option value="LATEST">最新月份 (自動切換)</option>';
-            availableMonthsList.forEach(m => {
-                html += `<option value="${m}">${m} 月</option>`;
+            let html = '<option value="LATEST">最新資料年月 (自動切換)</option>';
+            availableMonthsList.forEach(ym => {
+                html += `<option value="${ym}">${formatYearMonthLabel(ym)}</option>`;
             });
             monthSel.innerHTML = html;
             monthSel.value = (currentSelected && availableMonthsList.includes(currentSelected)) ? currentSelected : 'LATEST';
@@ -1628,7 +1709,8 @@
             const r = document.getElementById('riskFilter').value;
 
             return allData.filter(d => {
-                if (targetM && String(d['月份']) !== targetM) return false;
+                const rowPeriod = d['資料年月'] || (d['月份'] ? `2026-${String(d['月份']).padStart(2, '0')}` : '');
+                if (targetM && String(rowPeriod) !== targetM) return false;
                 if (b !== 'ALL' && String(d['院區']) !== b) return false;
                 if (c !== 'ALL' && String(d['軟體類別']) !== c) return false;
                 const score = parseFloat(d['CVE風險指數(3.x)']) || 0;
@@ -1680,8 +1762,8 @@
 
             const pNew = document.getElementById('patchNewMonth');
             const pOld = document.getElementById('patchOldMonth');
-            pNew.innerHTML = availableMonthsList.map(m => `<option value="${m}">${m} 月</option>`).join('');
-            pOld.innerHTML = availableMonthsList.map(m => `<option value="${m}">${m} 月</option>`).join('');
+            pNew.innerHTML = availableMonthsList.map(ym => `<option value="${ym}">${formatYearMonthLabel(ym)}</option>`).join('');
+            pOld.innerHTML = availableMonthsList.map(ym => `<option value="${ym}">${formatYearMonthLabel(ym)}</option>`).join('');
 
             if (availableMonthsList.length >= 2) {
                 pNew.value = availableMonthsList[availableMonthsList.length - 1];
@@ -1707,15 +1789,25 @@
             const currentScopeData = getFilteredData();
             const activeMonth = getActiveSelectedMonth();
 
-            document.getElementById('currentDataScopeBadge').innerText = `基準：${activeMonth ? activeMonth + ' 月' : '全部'} 資料`;
-            document.getElementById('pieChartBadge').innerText = `${activeMonth ? activeMonth + ' 月' : ''} 軟體分佈`;
+            document.getElementById('currentDataScopeBadge').innerText = `基準：${activeMonth ? formatYearMonthLabel(activeMonth) : '全部'} 資料`;
+            document.getElementById('pieChartBadge').innerText = `${activeMonth ? formatYearMonthLabel(activeMonth) : ''} 軟體分佈`;
 
-            const vulnRecords = currentScopeData.filter(d => (parseInt(d['CVE弱點數量']) || 0) > 0 || (parseFloat(d['CVE風險指數(3.x)']) || 0) > 0).length;
-            const uniqueComputers = new Set(currentScopeData.map(d => d['電腦名稱'])).size;
-            const totalVuln = currentScopeData.reduce((sum, d) => sum + (parseInt(d['CVE弱點數量']) || 0), 0);
+            const vulnRows = currentScopeData.filter(d => (parseInt(d['CVE弱點數量']) || 0) > 0 || (parseFloat(d['CVE風險指數(3.x)']) || 0) > 0);
+            const vulnRecords = vulnRows.length; // 受影響軟體項目數 (符合弱點條件的軟體資料列數)
+            const uniqueComputers = new Set(currentScopeData.map(d => String(d['電腦名稱'] || '').trim()).filter(Boolean)).size; // 管理電腦總數
+            const affectedComputers = new Set(vulnRows.map(d => String(d['電腦名稱'] || '').trim()).filter(Boolean)).size; // 受影響電腦數
+            const highRiskComputers = new Set(
+                currentScopeData
+                    .filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0)
+                    .map(d => String(d['電腦名稱'] || '').trim())
+                    .filter(Boolean)
+            ).size; // 高風險受影響電腦數
+            const totalVuln = currentScopeData.reduce((sum, d) => sum + (parseInt(d['CVE弱點數量']) || 0), 0); // 弱點影響數 (非不重複 CVE ID 數)
 
-            document.getElementById('kpiVulnRecords').innerText = vulnRecords.toLocaleString();
             document.getElementById('kpiUniqueComputers').innerText = uniqueComputers.toLocaleString();
+            document.getElementById('kpiAffectedComputers').innerText = affectedComputers.toLocaleString();
+            document.getElementById('kpiHighRiskComputers').innerText = highRiskComputers.toLocaleString();
+            document.getElementById('kpiVulnRecords').innerText = vulnRecords.toLocaleString();
             document.getElementById('kpiTotalVuln').innerText = totalVuln.toLocaleString();
 
             updateCharts(currentScopeData);
@@ -1770,13 +1862,14 @@
             const riskLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
             const techColors = ['#06b6d4', '#f59e0b', '#10b981', '#f43f5e', '#a855f7', '#38bdf8', '#fb7185'];
 
-            const datasets = availableMonthsList.map((m, idx) => {
+            const datasets = availableMonthsList.map((ym, idx) => {
                 const b = document.getElementById('branchFilter').value;
                 const c = document.getElementById('categoryFilter').value;
                 const r = document.getElementById('riskFilter').value;
 
                 const mData = allData.filter(d => {
-                    if (String(d['月份']) !== m) return false;
+                    const rowPeriod = d['資料年月'] || (d['月份'] ? `2026-${String(d['月份']).padStart(2, '0')}` : '');
+                    if (String(rowPeriod) !== ym) return false;
                     if (b !== 'ALL' && String(d['院區']) !== b) return false;
                     if (c !== 'ALL' && String(d['軟體類別']) !== c) return false;
                     const score = parseFloat(d['CVE風險指數(3.x)']) || 0;
@@ -1787,7 +1880,7 @@
                 const counts = riskLevels.map(lvl => mData.filter(d => Math.round(parseFloat(d['CVE風險指數(3.x)']) || 0) === lvl).length);
 
                 return {
-                    label: m + ' 月',
+                    label: formatYearMonthLabel(ym),
                     data: counts,
                     borderColor: techColors[idx % techColors.length],
                     backgroundColor: techColors[idx % techColors.length],
@@ -2015,8 +2108,14 @@
             const baselineMode = document.getElementById('patchBaselineMode')?.value || 'COMMON_ONLINE';
             if (!newM || !oldM) return;
 
-            const rawOldData = allData.filter(d => String(d['月份']) === oldM);
-            const rawNewData = allData.filter(d => String(d['月份']) === newM);
+            const rawOldData = allData.filter(d => {
+                const rp = d['資料年月'] || (d['月份'] ? `2026-${String(d['月份']).padStart(2, '0')}` : '');
+                return String(rp) === oldM;
+            });
+            const rawNewData = allData.filter(d => {
+                const rp = d['資料年月'] || (d['月份'] ? `2026-${String(d['月份']).padStart(2, '0')}` : '');
+                return String(rp) === newM;
+            });
 
             // 1. 計算前後期在線設備集合 (以電腦名稱正規化比對)
             const oldDeviceSet = new Set(rawOldData.map(d => String(d['電腦名稱'] || '').trim().toUpperCase()).filter(Boolean));
@@ -2286,9 +2385,16 @@
                     rawCat = '驅動程式';
                 }
 
+                const parsedYear = (pendingFileParsedMeta?.year && /^20\d{2}$/.test(pendingFileParsedMeta.year))
+                    ? pendingFileParsedMeta.year
+                    : '2026';
+                const periodStr = `${parsedYear}-${String(parseInt(applyMonth, 10)).padStart(2, '0')}`;
+
                 return {
                     company_name: currentComp,
+                    資料年度: parsedYear,
                     月份: applyMonth,
+                    資料年月: periodStr,
                     電腦名稱: rawPc,
                     院區: rawBranch,
                     完整部門: rawDept,
@@ -2314,9 +2420,10 @@
             newlyImportedRawRows = sanitized;
             allData = allData.concat(sanitized);
 
-            if (applyMonth && !availableMonthsList.includes(applyMonth)) {
-                availableMonthsList.push(applyMonth);
-                availableMonthsList.sort((a, b) => parseInt(a) - parseInt(b));
+            const importPeriod = sanitized[0]?.['資料年月'];
+            if (importPeriod && !availableMonthsList.includes(importPeriod)) {
+                availableMonthsList.push(importPeriod);
+                availableMonthsList.sort((a, b) => a.localeCompare(b));
             }
 
             closeMappingModal();
@@ -2329,7 +2436,7 @@
             populateFilters();
             updateDashboard();
 
-            alert(`✅ 解析成功！檔名辨識月份為【${applyMonth} 月】，共轉換【${sanitized.length.toLocaleString()}】筆資料，請點擊上方綠色按鈕【寫入 Turso】同步至雲端。`);
+            alert(`✅ 解析成功！檔名辨識資料年月為【${importPeriod}】，共轉換【${sanitized.length.toLocaleString()}】筆資料，請點擊上方綠色按鈕【寫入 Turso】同步至雲端。`);
         }
 
         // ========================================================
@@ -2351,15 +2458,26 @@
 
             const currentComp = currentUser.company_name || '台灣電力股份有限公司';
             const targetMonth = String(newlyImportedRawRows[0]['月份'] || '').trim();
+            const targetPeriod = String(newlyImportedRawRows[0]['資料年月'] || `2026-${targetMonth.padStart(2, '0')}`).trim();
 
             try {
-                // 查詢 Turso 資料庫中該客戶該月份是否已存在資料
-                const checkRows = await executeTursoSQL(
-                    `SELECT COUNT(*) AS cnt FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
-                    [targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
-                    ACTIVE_DB_URL,
-                    ACTIVE_AUTH_TOKEN
-                );
+                // 查詢 Turso 資料庫中該客戶該「資料年月」是否已存在資料
+                let checkRows = [];
+                try {
+                    checkRows = await executeTursoSQL(
+                        `SELECT COUNT(*) AS cnt FROM endpoint_software_assets WHERE (資料年月 = ? OR (資料年月 IS NULL AND ("月份" = ? OR "月份" = ? OR "月份" = ?))) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
+                        [targetPeriod, targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
+                        ACTIVE_DB_URL,
+                        ACTIVE_AUTH_TOKEN
+                    );
+                } catch (e) {
+                    checkRows = await executeTursoSQL(
+                        `SELECT COUNT(*) AS cnt FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
+                        [targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
+                        ACTIVE_DB_URL,
+                        ACTIVE_AUTH_TOKEN
+                    );
+                }
 
                 const existingCount = parseInt(checkRows[0]?.cnt || 0, 10);
 
@@ -2368,7 +2486,7 @@
                     document.getElementById('duplicateMonthSummary').innerHTML = `
                         <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1.5">
                             <div>• 客戶對象：<span class="text-amber-300 font-bold">${currentComp}</span></div>
-                            <div>• 目標月份：<span class="text-cyan-400 font-bold font-mono">${targetMonth} 月</span></div>
+                            <div>• 目標資料年月：<span class="text-cyan-400 font-bold font-mono">${formatYearMonthLabel(targetPeriod)}</span></div>
                             <div>• 雲端現有：<span class="text-rose-400 font-bold font-mono">${existingCount.toLocaleString()}</span> 筆舊資料</div>
                             <div>• 本次準備：<span class="text-emerald-400 font-bold font-mono">${newlyImportedRawRows.length.toLocaleString()}</span> 筆新資料</div>
                         </div>
@@ -2399,25 +2517,36 @@
 
             const currentComp = currentUser.company_name || '台灣電力股份有限公司';
             const targetMonth = String(newlyImportedRawRows[0]['月份'] || '').trim();
+            const targetPeriod = String(newlyImportedRawRows[0]['資料年月'] || `2026-${targetMonth.padStart(2, '0')}`).trim();
+            const targetYear = String(newlyImportedRawRows[0]['資料年度'] || targetPeriod.split('-')[0] || '2026').trim();
 
             try {
-                // 若選擇「完整覆蓋」，先清除該客戶該月份所有舊資料
+                // 若選擇「完整覆蓋」，先清除該客戶該「資料年月」所有舊資料
                 if (mode === 'OVERWRITE') {
-                    btn.innerHTML = `<i class="fa-solid fa-trash-can fa-bounce mr-1 text-amber-400"></i> 正在清除 ${targetMonth} 月舊資料...`;
-                    await executeTursoSQL(
-                        `DELETE FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
-                        [targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
-                        ACTIVE_DB_URL,
-                        ACTIVE_AUTH_TOKEN
-                    );
+                    btn.innerHTML = `<i class="fa-solid fa-trash-can fa-bounce mr-1 text-amber-400"></i> 正在清除 ${targetPeriod} 舊資料...`;
+                    try {
+                        await executeTursoSQL(
+                            `DELETE FROM endpoint_software_assets WHERE (資料年月 = ? OR (資料年月 IS NULL AND ("月份" = ? OR "月份" = ? OR "月份" = ?))) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
+                            [targetPeriod, targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
+                            ACTIVE_DB_URL,
+                            ACTIVE_AUTH_TOKEN
+                        );
+                    } catch (delErr) {
+                        await executeTursoSQL(
+                            `DELETE FROM endpoint_software_assets WHERE ("月份" = ? OR "月份" = ? OR "月份" = ?) AND (company_name = ? OR (company_name IS NULL AND ? = '臺北市立聯合醫院'));`,
+                            [targetMonth, targetMonth + '.0', targetMonth + '月', currentComp, currentComp],
+                            ACTIVE_DB_URL,
+                            ACTIVE_AUTH_TOKEN
+                        );
+                    }
                 }
 
                 const INSERT_SQL = `
                 INSERT OR IGNORE INTO endpoint_software_assets (
-                    company_name, "月份", "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
+                    company_name, 資料年度, "月份", 資料年月, "電腦名稱", "院區", "完整部門", "IP位址", "軟體類別", "資產名稱",
                     "資產廠商", "資產版本", "CPE 2.3", "CPE完整名稱", "CVE風險指數(2.0)",
                     "CVE風險指數(3.x)", "CVE弱點數量"
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS REAL), CAST(? AS REAL), CAST(? AS INTEGER));
                 `;
 
                 const batchSize = 300;
@@ -2431,7 +2560,9 @@
                             sql: INSERT_SQL,
                             args: [
                                 { type: 'text', value: currentComp },
+                                { type: 'text', value: String(r['資料年度'] || targetYear) },
                                 { type: 'text', value: String(r['月份']) },
+                                { type: 'text', value: String(r['資料年月'] || targetPeriod) },
                                 { type: 'text', value: String(r['電腦名稱']) },
                                 { type: 'text', value: String(r['院區']) },
                                 { type: 'text', value: String(r['完整部門']) },
@@ -2661,7 +2792,10 @@
             const dlBody = document.getElementById('patchDownloadTableBody');
 
             // 1. 統計當期所有不重複軟體 (保證軟體修補下載 100% 列出所有軟體)
-            const currentMonthData = allData.filter(d => String(d['月份']) === month);
+            const currentMonthData = allData.filter(d => {
+                const rp = d['資料年月'] || (d['月份'] ? `2026-${String(d['月份']).padStart(2, '0')}` : '');
+                return String(rp) === month;
+            });
             const swMap = {};
             const unitVulnMap = {};
             let totalVulnSum = 0;
@@ -2763,10 +2897,13 @@
             planContainer.innerHTML = `<div class="p-8 text-center text-sky-400 font-mono text-xs"><i class="fa-solid fa-microchip fa-spin mr-2 text-base"></i> Copilot 正在為【${comp}】生成 ${month} 月份修補規劃與載點...</div>`;
 
             // 計算跨月比對數據
-            const sortedMonths = [...availableMonthsList].sort((a, b) => parseInt(a) - parseInt(b));
+            const sortedMonths = [...availableMonthsList].sort((a, b) => a.localeCompare(b));
             const curIdx = sortedMonths.indexOf(month);
             const prevMonth = curIdx > 0 ? sortedMonths[curIdx - 1] : month;
-            const prevMonthData = allData.filter(d => String(d['月份']) === prevMonth);
+            const prevMonthData = allData.filter(d => {
+                const rp = d['資料年月'] || (d['月份'] ? `2026-${String(d['月份']).padStart(2, '0')}` : '');
+                return String(rp) === prevMonth;
+            });
 
             const prevHighCount = prevMonthData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).length;
             const curHighCount = currentMonthData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).length;
@@ -2787,11 +2924,11 @@
                 const userPrompt = `
 請針對客戶「${comp}」（機構型態：${orgContext}）的 ${month} 月份端點資產數據，一次性完成「1.分析總表洞察、2.數據比對研判、3.修補規劃策略、4.軟體修補載點」四大模組分析運算：
 
-【總表統計】
-- 納管電腦總數：${uniquePcSet.size} 台
-- 軟體裝機總筆數：${currentMonthData.length} 筆
-- 累計 CVE 弱點總數：${totalVulnSum} 個
-- 弱點數最高前 5 單位：${JSON.stringify(topUnits)}
+【總表統計（已明確區分統計單位，避免混淆）】
+- 管理電腦總數（不重複電腦名稱）：${uniquePcSet.size} 台
+- 受影響軟體項目數（符合弱點條件之軟體資料列）：${currentMonthData.filter(d => (parseInt(d['CVE弱點數量']) || 0) > 0 || (parseFloat(d['CVE風險指數(3.x)']) || 0) > 0).length} 項
+- 弱點影響數（各軟體列 CVE 數量加總，非不重複 CVE ID 數）：${totalVulnSum}
+- 弱點影響數最高前 5 單位：${JSON.stringify(topUnits)}
 
 【跨月數據比對（採用共同在線設備基準排除離線誤判）】
 - 前期月份：${prevMonth} 月（高風險記錄 ${prevHighCount} 筆）
