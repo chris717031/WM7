@@ -6,6 +6,47 @@
     <title>端點資產與軟體弱點戰情儀表板 - SEC-OPS Enterprise</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ================= Copilot 分析引擎配置 Modal ================= -->
+    <div id="copilotConfigModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card rounded-2xl p-6 max-w-lg w-full mx-4 border border-sky-500/40 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-100 flex items-center">
+                    <i class="fa-solid fa-robot text-sky-400 mr-2"></i> Copilot 資安分析引擎設定
+                </h3>
+                <button onclick="closeCopilotConfigModal()" class="text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4 font-sans leading-relaxed">
+                儀表板載入時會自動透過 Copilot 引擎運算「分析總表、數據比對、修補規劃、軟體修補下載」四大模組。支援 <span class="text-sky-300 font-mono">GitHub Copilot Models (gpt-4o)</span>、<span class="text-sky-300 font-mono">Azure OpenAI Copilot</span> 或 <span class="text-emerald-300 font-mono">Groq Cloud</span>。
+            </p>
+            <form onsubmit="saveCopilotConfigToTurso(event)" class="space-y-3 text-xs font-mono">
+                <div>
+                    <label class="block text-slate-300 mb-1">引擎預設範本快速套用：</label>
+                    <select id="copilotPresetSelect" onchange="onCopilotPresetChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sky-300 focus:outline-none">
+                        <option value="github">GitHub Copilot / Azure Inference (gpt-4o)</option>
+                        <option value="azure">Azure OpenAI Copilot Endpoint (自訂部署)</option>
+                        <option value="groq">Groq Cloud 高速引擎 (已內建備援金鑰)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 mb-1">Copilot API Endpoint URL</label>
+                    <input type="text" id="cfgCopilotUrl" required placeholder="https://models.inference.ai.azure.com/chat/completions" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 mb-1">模型名稱 (Model Name)</label>
+                    <input type="text" id="cfgCopilotModel" required placeholder="gpt-4o" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 mb-1">Copilot API Key / GitHub PAT (留空則沿用現有金鑰)</label>
+                    <input type="password" id="cfgCopilotKey" placeholder="ghp_... 或 Azure API Key (留空使用目前設定)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeCopilotConfigModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">取消</button>
+                    <button type="submit" class="px-5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold">儲存並立即重算</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -135,6 +176,11 @@
                     <i class="fa-solid fa-rotate mr-1 text-cyan-400"></i> 重新載入
                 </button>
 
+                <!-- Copilot 分析引擎狀態與設定 -->
+                <button id="btnCopilotConfig" onclick="openCopilotConfigModal()" class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold tracking-wider text-sky-300 bg-sky-950/50 border border-sky-500/40 rounded-lg hover:bg-sky-900/60 hover:border-sky-400 cursor-pointer shadow-md transition font-mono" title="設定 Microsoft / GitHub Copilot API 引擎">
+                    <i class="fa-solid fa-sparkles mr-1.5 text-sky-400"></i><span id="copilotHeaderBadge">Copilot 就緒</span>
+                </button>
+
                 <!-- 管理者專屬：新增客戶 (免填 URL/Token) -->
                 <button id="btnCreateTenant" onclick="openCreateTenantModal()" class="hidden inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300 bg-amber-950/40 border border-amber-500/40 rounded-lg hover:bg-amber-950/70 hover:border-amber-400 cursor-pointer shadow-md transition font-mono">
                     <i class="fa-solid fa-building-circle-plus mr-1 text-amber-400"></i> 新增客戶
@@ -252,6 +298,27 @@
                         <p class="text-xs text-slate-400 mt-2 flex items-center">
                             <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2"></span>當期累計 CVE 弱點總數
                         </p>
+                    </div>
+                </div>
+
+                <!-- SEC-OPS Copilot 分析總表智慧戰情洞察 -->
+                <div class="glass-card rounded-2xl p-6 border border-sky-500/30 relative overflow-hidden">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-800/80 pb-3 mb-4 gap-2">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="h-7 w-7 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-xs shadow">
+                                <i class="fa-solid fa-robot"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-100 tracking-wide">Copilot 資安戰情總結與風險洞察 (分析總表)</h3>
+                                <p id="copilotOverviewMeta" class="text-[11px] font-mono text-sky-400/90">資料載入時自動啟動 Copilot 分析運算...</p>
+                            </div>
+                        </div>
+                        <button onclick="runCopilotFullDashboardAnalysis(true)" class="px-3 py-1 rounded-lg bg-sky-950/70 border border-sky-500/40 text-sky-300 hover:bg-sky-900 text-xs font-mono transition self-start sm:self-auto">
+                            <i class="fa-solid fa-bolt mr-1"></i> 重新 Copilot 運算
+                        </button>
+                    </div>
+                    <div id="copilotOverviewContent" class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
+                        <div class="col-span-3 text-slate-400 font-mono py-3"><i class="fa-solid fa-spinner fa-spin mr-2 text-sky-400"></i>等待數據載入後自動執行 Copilot 總表研判...</div>
                     </div>
                 </div>
 
@@ -418,6 +485,20 @@
                         </div>
                     </div>
 
+                    <!-- Copilot 數據比對消長研判 -->
+                    <div class="mb-6 p-4 rounded-xl bg-sky-950/20 border border-sky-500/30">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-robot text-sky-400"></i>
+                                <h3 class="text-xs font-bold text-sky-300 font-mono uppercase tracking-wider">Copilot 跨月數據比對與消長研判</h3>
+                            </div>
+                            <span id="copilotPatchBadge" class="text-[10px] font-mono text-slate-400">自動運算中...</span>
+                        </div>
+                        <div id="copilotPatchContent" class="text-xs text-slate-300 leading-relaxed font-sans">
+                            正在載入跨月數據進行 Copilot 比對分析...
+                        </div>
+                    </div>
+
                     <div class="bg-slate-900/90 rounded-xl border border-slate-800 overflow-hidden">
                         <div class="p-4 border-b border-slate-800">
                             <h3 class="text-sm font-bold text-slate-100 font-mono">重點弱點軟體月度消長明細</h3>
@@ -447,13 +528,13 @@
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-800 pb-4 mb-5 gap-3">
                         <div>
                             <h2 class="text-lg font-bold text-slate-100 flex items-center">
-                                <i class="fa-solid fa-robot text-cyan-400 mr-2.5"></i> AI 智慧端點弱點修補規劃 (Groq AI Engine)
+                                <i class="fa-solid fa-robot text-cyan-400 mr-2.5"></i> Copilot 智慧端點弱點修補規劃 (修補規劃)
                             </h2>
                             <p id="aiPlanningSubtitle" class="text-xs text-slate-400 mt-1 font-sans">
                                 依據當前客戶高風險軟體清單與機構型態，自動生成階梯式派送與隔離策略
                             </p>
                         </div>
-                        <button onclick="autoUpdateRemediationWithGroq(true)" class="px-3.5 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 text-xs font-mono transition flex items-center gap-1.5 shrink-0">
+                        <button onclick="runCopilotFullDashboardAnalysis(true)" class="px-3.5 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 text-xs font-mono transition flex items-center gap-1.5 shrink-0">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> 重新 AI 分析
                         </button>
                     </div>
@@ -469,13 +550,13 @@
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 border-b border-slate-800 pb-3 gap-3">
                         <div>
                             <h2 class="text-base font-bold text-slate-100 flex items-center">
-                                <i class="fa-solid fa-cloud-arrow-down text-emerald-400 mr-2"></i> 端點全部軟體修補與原廠載點 (全清單)
+                                <i class="fa-solid fa-cloud-arrow-down text-emerald-400 mr-2"></i> Copilot 端點全部軟體修補與原廠載點 (軟體修補下載)
                             </h2>
                             <p id="aiDownloadSubtitle" class="text-[11px] text-slate-400 mt-0.5 font-mono">AI 自動檢索最新安全修補版本與原廠官方下載入口</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <input type="text" id="downloadSearchInput" placeholder="搜尋軟體或原廠..." class="px-3 py-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono" oninput="filterAIDownloadTable()">
-                            <button onclick="autoUpdateRemediationWithGroq(true)" class="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60 text-xs font-mono transition shrink-0">
+                            <button onclick="runCopilotFullDashboardAnalysis(true)" class="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60 text-xs font-mono transition shrink-0">
                                 <i class="fa-solid fa-rotate"></i> 更新載點
                             </button>
                         </div>
@@ -1450,6 +1531,9 @@
                 syncText.innerHTML = `<span class="text-emerald-400">● 【${targetComp}】同步完成 (${allData.length.toLocaleString()} 筆)</span>`;
                 sideStats.innerText = `納管筆數: ${allData.length.toLocaleString()} 筆`;
 
+                // 儀表板資料載入完成後，立即自動啟動 Copilot 對四大模組進行同步分析運算
+                runCopilotFullDashboardAnalysis(false);
+
             } catch (err) {
                 console.error('資料同步失敗:', err);
                 syncText.innerHTML = `<span class="text-rose-400">⚠️ 讀取失敗: ${err.message}</span>`;
@@ -1569,6 +1653,9 @@
             updateCharts(currentScopeData);
             currentPage = 1;
             updateTable();
+            if (typeof runCopilotFullDashboardAnalysis === 'function' && allData.length > 0) {
+                runCopilotFullDashboardAnalysis(false);
+            }
         }
 
         function updateCharts(currentScopeData) {
@@ -2192,24 +2279,118 @@
         }
 
         // ========================================================
-        // Groq Llama-3.3-70b 智慧修補規劃與載點自動更新模組
+        // SEC-OPS Copilot 全域智慧分析運算引擎 (涵蓋四大模組)
+        // 支援 GitHub Copilot Models (gpt-4o) / Azure OpenAI Copilot / Groq 備援
         // ========================================================
         let cachedAIDownloadsList = [];
+        let lastCopilotRunSignature = "";
 
-        async function getGroqApiKeyFromTurso() {
+        function openCopilotConfigModal() {
+            document.getElementById('copilotConfigModal').classList.remove('hidden');
+        }
+        function closeCopilotConfigModal() {
+            document.getElementById('copilotConfigModal').classList.add('hidden');
+        }
+        function onCopilotPresetChange() {
+            const preset = document.getElementById('copilotPresetSelect').value;
+            const urlEl = document.getElementById('cfgCopilotUrl');
+            const modelEl = document.getElementById('cfgCopilotModel');
+            if (preset === 'github') {
+                urlEl.value = 'https://models.inference.ai.azure.com/chat/completions';
+                modelEl.value = 'gpt-4o';
+            } else if (preset === 'azure') {
+                urlEl.value = 'https://YOUR-RESOURCE.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview';
+                modelEl.value = 'gpt-4o';
+            } else {
+                urlEl.value = 'https://api.groq.com/openai/v1/chat/completions';
+                modelEl.value = 'llama-3.1-8b-instant';
+            }
+        }
+
+        async function saveCopilotConfigToTurso(event) {
+            event.preventDefault();
+            const url = document.getElementById('cfgCopilotUrl').value.trim();
+            const model = document.getElementById('cfgCopilotModel').value.trim();
+            const key = document.getElementById('cfgCopilotKey').value.trim();
+
+            try {
+                await executeTursoSQL(
+                    `INSERT OR REPLACE INTO sys_config (config_key, config_value, updated_at) VALUES ('COPILOT_API_URL', ?, datetime('now', '+8 hours'));`,
+                    [url], CENTRAL_DB_URL, CENTRAL_AUTH_TOKEN
+                );
+                await executeTursoSQL(
+                    `INSERT OR REPLACE INTO sys_config (config_key, config_value, updated_at) VALUES ('COPILOT_MODEL', ?, datetime('now', '+8 hours'));`,
+                    [model], CENTRAL_DB_URL, CENTRAL_AUTH_TOKEN
+                );
+                if (key) {
+                    await executeTursoSQL(
+                        `INSERT OR REPLACE INTO sys_config (config_key, config_value, updated_at) VALUES ('COPILOT_API_KEY', ?, datetime('now', '+8 hours'));`,
+                        [key], CENTRAL_DB_URL, CENTRAL_AUTH_TOKEN
+                    );
+                }
+                alert('✅ Copilot 引擎設定已儲存！正在重新執行四大模組運算...');
+                closeCopilotConfigModal();
+                lastCopilotRunSignature = "";
+                await runCopilotFullDashboardAnalysis(true);
+            } catch (err) {
+                alert(`儲存設定失敗: ${err.message}`);
+            }
+        }
+
+        // 從 Turso 讀取 Copilot 引擎設定 (優先讀取 COPILOT_*，無設定時自動無縫銜接 GROQ_API_KEY)
+        async function getCopilotEngineConfigFromTurso() {
             const rows = await executeTursoSQL(
-                `SELECT config_value FROM sys_config WHERE config_key = 'GROQ_API_KEY';`,
+                `SELECT config_key, config_value FROM sys_config WHERE config_key IN ('COPILOT_API_URL', 'COPILOT_API_KEY', 'COPILOT_MODEL', 'GROQ_API_KEY');`,
                 [],
                 CENTRAL_DB_URL,
                 CENTRAL_AUTH_TOKEN
             );
-            if (rows && rows.length > 0 && rows[0].config_value) {
-                return rows[0].config_value.trim();
+            const cfg = {};
+            (rows || []).forEach(r => { cfg[r.config_key] = (r.config_value || '').trim(); });
+
+            // 若有設定專屬 Copilot Key
+            if (cfg['COPILOT_API_KEY']) {
+                return {
+                    engineLabel: cfg['COPILOT_API_URL']?.includes('azure') ? 'Microsoft / GitHub Copilot' : 'Enterprise Copilot',
+                    url: cfg['COPILOT_API_URL'] || 'https://models.inference.ai.azure.com/chat/completions',
+                    apiKey: cfg['COPILOT_API_KEY'],
+                    model: cfg['COPILOT_MODEL'] || 'gpt-4o',
+                    isAzure: (cfg['COPILOT_API_URL'] || '').includes('openai.azure.com')
+                };
             }
-            throw new Error("尚未在 Turso sys_config 資料表中設定 GROQ_API_KEY！");
+
+            // 預設無縫使用已配置的 Groq 高速推論引擎作為 Copilot 後端
+            if (cfg['GROQ_API_KEY']) {
+                let selectedModel = cfg['COPILOT_MODEL'] || "llama-3.1-8b-instant";
+                try {
+                    const modelsResp = await fetch("https://api.groq.com/openai/v1/models", {
+                        headers: { "Authorization": `Bearer ${cfg['GROQ_API_KEY']}` }
+                    });
+                    if (modelsResp.ok) {
+                        const modelsData = await modelsResp.json();
+                        const availableIds = (modelsData.data || []).map(m => m.id);
+                        const preferredOrder = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"];
+                        const matched = preferredOrder.find(id => availableIds.includes(id));
+                        if (matched) selectedModel = matched;
+                        else {
+                            const textModel = availableIds.find(id => !id.includes("whisper") && !id.includes("guard"));
+                            if (textModel) selectedModel = textModel;
+                        }
+                    }
+                } catch (e) {}
+
+                return {
+                    engineLabel: `SEC-OPS Copilot (${selectedModel})`,
+                    url: "https://api.groq.com/openai/v1/chat/completions",
+                    apiKey: cfg['GROQ_API_KEY'],
+                    model: selectedModel,
+                    isAzure: false
+                };
+            }
+
+            throw new Error("尚未在 Turso sys_config 中配置 COPILOT_API_KEY 或 GROQ_API_KEY！");
         }
 
-        // 輔助函式：自動推斷原廠與官方載點
         function guessVendorFromName(swName) {
             if (/microsoft|office|windows|edge|\.net|visual c\+\+|onedrive|teams/i.test(swName)) return 'Microsoft';
             if (/google|chrome/i.test(swName)) return 'Google';
@@ -2239,33 +2420,47 @@
             return `https://www.google.com/search?q=${encodeURIComponent(swName + ' 官方下載 最新版本')}`;
         }
 
-        async function autoUpdateRemediationWithGroq(forceRefresh = false) {
-            if (!currentUser || allData.length === 0) {
-                document.getElementById('aiPlanningContainer').innerHTML = `<div class="p-6 text-center text-slate-400 font-mono text-xs">目前尚無盤點資產數據，請先載入或匯入客戶資料。</div>`;
-                document.getElementById('patchDownloadTableBody').innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono">目前尚無盤點資產數據</td></tr>`;
-                return;
-            }
+        // 統一入口：開始數據儀表板時，以 Copilot 對「分析總表、數據比對、修補規劃、軟體修補下載」進行全面分析運算
+        async function runCopilotFullDashboardAnalysis(forceRefresh = false) {
+            if (!currentUser || allData.length === 0) return;
 
             const comp = currentUser.company_name || '預設機構';
             const month = getActiveSelectedMonth();
+            const runSig = `${comp}_${month}`;
+
+            if (!forceRefresh && lastCopilotRunSignature === runSig) return;
+            lastCopilotRunSignature = runSig;
+
             const orgContext = currentUser.org_type === 'hospital'
                 ? '大型醫療院所（需嚴格考量醫療儀器、PACS/HIS 臨床系統相容性，避免隨意重開機影響醫療作業）'
                 : '關鍵基礎設施與大型企業（如電力營運單位，需考量工控系統穩定性與營運不中斷）';
-            const cacheKey = `${comp}_${month}`;
+            const cacheKey = `COPILOT_V2_${comp}_${month}`;
 
+            const badgeEl = document.getElementById('copilotHeaderBadge');
+            const overviewEl = document.getElementById('copilotOverviewContent');
+            const patchEl = document.getElementById('copilotPatchContent');
             const planContainer = document.getElementById('aiPlanningContainer');
             const dlBody = document.getElementById('patchDownloadTableBody');
 
-            // 1. 先從當前月份 allData 完整統計「所有不重複軟體」(保證 100% 列出每一套軟體)
+            // 1. 統計當期所有不重複軟體 (保證軟體修補下載 100% 列出所有軟體)
             const currentMonthData = allData.filter(d => String(d['月份']) === month);
             const swMap = {};
+            const unitVulnMap = {};
+            let totalVulnSum = 0;
+            const uniquePcSet = new Set();
+
             currentMonthData.forEach(d => {
                 const name = String(d['資產名稱'] || '').trim();
-                if (!name || name === '未知軟體' || name === '資產名稱') return;
                 const cvss = parseFloat(d['CVE風險指數(3.x)']) || 0;
                 const cveCnt = parseInt(d['CVE弱點數量']) || 0;
                 const ver = String(d['資產版本'] || '').trim();
+                const unit = String(d['院區'] || '未分配').trim();
 
+                if (d['電腦名稱']) uniquePcSet.add(d['電腦名稱']);
+                totalVulnSum += cveCnt;
+                unitVulnMap[unit] = (unitVulnMap[unit] || 0) + cveCnt;
+
+                if (!name || name === '未知軟體' || name === '資產名稱') return;
                 if (!swMap[name]) {
                     swMap[name] = {
                         name,
@@ -2282,20 +2477,12 @@
                 swMap[name].maxCvss = Math.max(swMap[name].maxCvss, cvss);
             });
 
-            // 依「是否具弱點 -> 最高風險分數 -> 裝機台數」排序
             const allSoftwareList = Object.values(swMap).sort((a, b) => {
                 if ((b.vulnCount > 0) !== (a.vulnCount > 0)) return (b.vulnCount > 0) ? 1 : -1;
                 if (b.maxCvss !== a.maxCvss) return b.maxCvss - a.maxCvss;
                 return b.count - a.count;
             });
 
-            if (allSoftwareList.length === 0) {
-                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無軟體盤點記錄。</div>`;
-                dlBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono">當期無軟體資產記錄</td></tr>`;
-                return;
-            }
-
-            // 建立「全部軟體下載基底清單」，確保無論 AI 狀態為何，表格必定列出全部軟體
             const buildBaseDownloads = (aiDownloadsMap = {}) => {
                 return allSoftwareList.map(sw => {
                     const verList = Array.from(sw.versions);
@@ -2306,19 +2493,17 @@
                         vendor: aiMatch?.vendor || sw.vendor,
                         current_version: verDisplay,
                         recommended_version: aiMatch?.recommended_version || (sw.vulnCount > 0 ? `請更新至官方最新安全版 (CVSS ${sw.maxCvss})` : '無已知高危弱點 (維持最新即可)'),
-                        download_url: aiMatch?.download_url || buildOfficialSearchUrl(sw.name),
-                        count: sw.count,
-                        maxCvss: sw.maxCvss
+                        download_url: aiMatch?.download_url || buildOfficialSearchUrl(sw.name)
                     };
                 });
             };
 
-            // 立刻渲染出「全部軟體清單」，零等待呈現所有軟體
+            // 立即呈現「軟體修補下載」全部軟體清單
             const initialDownloads = buildBaseDownloads();
             document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${initialDownloads.length} 套不重複軟體）`;
             renderAIDownloads(initialDownloads);
 
-            // 2. 檢查 Turso 快取 (僅在快取數量完整且非強制更新時使用)
+            // 2. 優先檢查 Turso 四大模組快取
             if (!forceRefresh) {
                 try {
                     const cached = await executeTursoSQL(
@@ -2328,26 +2513,47 @@
                         CENTRAL_AUTH_TOKEN
                     );
                     if (cached && cached.length > 0) {
-                        const planData = JSON.parse(cached[0].planning_json);
+                        const bundle = JSON.parse(cached[0].planning_json);
                         const dlData = JSON.parse(cached[0].downloads_json);
-                        // 防止舊的「單一筆」快取蓋掉全清單
-                        if (planData.length > 0 && dlData.length >= Math.min(allSoftwareList.length, 5)) {
+                        if (bundle && bundle.overview && bundle.planning && dlData.length >= Math.min(allSoftwareList.length, 5)) {
                             const aiMap = {};
                             dlData.forEach(d => { if (d.software) aiMap[d.software.toLowerCase().trim()] = d; });
                             const merged = buildBaseDownloads(aiMap);
+
+                            if (badgeEl) badgeEl.innerText = `Copilot 已完成 (${month}月)`;
+                            document.getElementById('copilotOverviewMeta').innerText = `基準：【${comp}】${month} 月份全域數據（快取時間：${cached[0].updated_at}）`;
+                            document.getElementById('copilotPatchBadge').innerText = `快取時間：${cached[0].updated_at}`;
                             document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（快取時間：${cached[0].updated_at}）`;
-                            document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${merged.length} 套，已整合 AI 建議版本）`;
-                            renderAIPlanning(planData);
+                            document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${merged.length} 套，Copilot 已校驗）`;
+
+                            renderCopilotOverview(bundle.overview);
+                            renderCopilotPatchInsight(bundle.patch_comparison);
+                            renderAIPlanning(bundle.planning);
                             renderAIDownloads(merged);
                             return;
                         }
                     }
                 } catch (e) {
-                    console.warn("讀取 AI 快取略過:", e);
+                    console.warn("讀取 Copilot 快取略過:", e);
                 }
             }
 
-            // 3. 呼叫 Groq AI 針對前 15 大重點弱點軟體生成「修補規劃」與「精準版本號」
+            // 3. 準備四大模組聚合指標交由 Copilot 進行統一運算
+            if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>Copilot 運算中...`;
+            overviewEl.innerHTML = `<div class="col-span-3 text-sky-400 font-mono py-3"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Copilot 正在運算【${comp}】${month} 月份分析總表、數據比對與修補規劃...</div>`;
+            patchEl.innerHTML = `<span class="text-sky-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Copilot 正在進行跨月修補消長研判...</span>`;
+            planContainer.innerHTML = `<div class="p-8 text-center text-sky-400 font-mono text-xs"><i class="fa-solid fa-microchip fa-spin mr-2 text-base"></i> Copilot 正在為【${comp}】生成 ${month} 月份修補規劃與載點...</div>`;
+
+            // 計算跨月比對數據
+            const sortedMonths = [...availableMonthsList].sort((a, b) => parseInt(a) - parseInt(b));
+            const curIdx = sortedMonths.indexOf(month);
+            const prevMonth = curIdx > 0 ? sortedMonths[curIdx - 1] : month;
+            const prevMonthData = allData.filter(d => String(d['月份']) === prevMonth);
+
+            const prevHighCount = prevMonthData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).length;
+            const curHighCount = currentMonthData.filter(d => (parseFloat(d['CVE風險指數(3.x)']) || 0) >= 7.0).length;
+
+            const topUnits = Object.entries(unitVulnMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([u, v]) => ({ unit: u, vulns: v }));
             const topSoftware = allSoftwareList.filter(s => s.vulnCount > 0).slice(0, 15).map(s => ({
                 name: s.name,
                 version: Array.from(s.versions)[0] || '多版本',
@@ -2355,70 +2561,70 @@
                 maxCvss: s.maxCvss
             }));
 
-            if (topSoftware.length === 0) {
-                planContainer.innerHTML = `<div class="p-6 text-center text-emerald-400 font-mono text-xs">🎉 【${comp}】${month} 月份無弱點軟體，維持常態監控即可。</div>`;
-                return;
-            }
-
-            planContainer.innerHTML = `<div class="p-8 text-center text-cyan-400 font-mono text-xs"><i class="fa-solid fa-microchip fa-spin mr-2 text-base"></i> Groq AI 正在為【${comp}】分析前 ${topSoftware.length} 項重點弱點軟體並生成修補規劃...</div>`;
-
             try {
-                const groqApiKey = await getGroqApiKeyFromTurso();
-                const systemPrompt = "你是一位精通台灣企業與醫療資安防護、神網(SmartWeb)端點派送與 CVE 弱點修補的資深系統顧問。請嚴格輸出合法的純 JSON 物件，不可包含 Markdown 語法。所有內容使用繁體中文。";
+                const engineCfg = await getCopilotEngineConfigFromTurso();
+
+                const systemPrompt = "你是企業資安營運中心(SEC-OPS)的 Microsoft/GitHub Copilot 資安分析引擎，精通神網(SmartWeb)端點派送、CVSS 風險評估與跨月弱點修補治理。你必須嚴格輸出合法的純 JSON 物件，不可包含任何 Markdown 語法，所有內容請使用繁體中文。";
+
                 const userPrompt = `
-客戶機構：${comp}（${orgContext}）
-盤點月份：${month} 月
-重點弱點軟體清單：
+請針對客戶「${comp}」（機構型態：${orgContext}）的 ${month} 月份端點資產數據，一次性完成「1.分析總表洞察、2.數據比對研判、3.修補規劃策略、4.軟體修補載點」四大模組分析運算：
+
+【總表統計】
+- 納管電腦總數：${uniquePcSet.size} 台
+- 軟體裝機總筆數：${currentMonthData.length} 筆
+- 累計 CVE 弱點總數：${totalVulnSum} 個
+- 弱點數最高前 5 單位：${JSON.stringify(topUnits)}
+
+【跨月數據比對】
+- 前期月份：${prevMonth} 月（高風險記錄 ${prevHighCount} 筆）
+- 當期月份：${month} 月（高風險記錄 ${curHighCount} 筆，增減差額 ${curHighCount - prevHighCount} 筆）
+
+【重點弱點軟體清單】
 ${JSON.stringify(topSoftware)}
 
-請輸出 JSON：
+請嚴格輸出以下 JSON 結構：
 {
+  "overview": {
+    "risk_posture": "整體資安態勢一句話總評（如：高危集中於辦公軟體與舊版元件，建議優先收斂）",
+    "hotspot_summary": "熱點單位與主要弱點來源分析（點出具體單位名稱與關鍵風險軟體）",
+    "immediate_action": "本月最優先執行的 1～2 項關鍵治理行動建議"
+  },
+  "patch_comparison": {
+    "trend_verdict": "對比 ${prevMonth} 月與 ${month} 月的修補成效與消長原因深度研判（2～3句具體說明）",
+    "focus_point": "數據比對中需特別注意的異常新增或未修補瓶頸"
+  },
   "planning": [
     {
       "tier": "第一梯次：自動化離峰派送" 或 "第二梯次：實機測試後排程" 或 "第三梯次：VLAN隔離與白名單",
-      "software": "軟體名稱（必須與輸入完全一致）",
-      "affected_count": 影響台數,
+      "software": "軟體名稱（必須與輸入一致）",
+      "affected_count": 影響台數數字,
       "max_cvss": 最高風險分數,
-      "strategy": "具體修補策略與相容性注意事項",
-      "deploy_command": "神網(SmartWeb)或靜默安裝參數建議"
+      "strategy": "針對${comp}業務環境的具體修補策略與相容性風險提示",
+      "deploy_command": "神網(SmartWeb)派送或靜默安裝參數建議"
     }
   ],
   "downloads": [
     {
-      "software": "軟體名稱（必須與輸入完全一致）",
-      "vendor": "原廠名稱",
+      "software": "軟體名稱（必須與輸入一致）",
+      "vendor": "原廠公司名稱",
       "recommended_version": "最新安全修補版本號",
-      "download_url": "原廠官方下載主頁或 Microsoft Update Catalog 網址"
+      "download_url": "原廠官方下載主頁或 Microsoft Update Catalog 搜尋網址"
     }
   ]
 }`;
 
-                let selectedModel = "llama-3.1-8b-instant";
-                try {
-                    const modelsResp = await fetch("https://api.groq.com/openai/v1/models", {
-                        headers: { "Authorization": `Bearer ${groqApiKey}` }
-                    });
-                    if (modelsResp.ok) {
-                        const modelsData = await modelsResp.json();
-                        const availableIds = (modelsData.data || []).map(m => m.id);
-                        const preferredOrder = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"];
-                        const matched = preferredOrder.find(id => availableIds.includes(id));
-                        if (matched) selectedModel = matched;
-                        else {
-                            const textModel = availableIds.find(id => !id.includes("whisper") && !id.includes("guard"));
-                            if (textModel) selectedModel = textModel;
-                        }
-                    }
-                } catch (e) {}
+                const headers = { "Content-Type": "application/json" };
+                if (engineCfg.isAzure) {
+                    headers["api-key"] = engineCfg.apiKey;
+                } else {
+                    headers["Authorization"] = `Bearer ${engineCfg.apiKey}`;
+                }
 
-                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                const response = await fetch(engineCfg.url, {
                     method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${groqApiKey}`,
-                        "Content-Type": "application/json"
-                    },
+                    headers: headers,
                     body: JSON.stringify({
-                        model: selectedModel,
+                        model: engineCfg.model,
                         messages: [
                             { role: "system", content: systemPrompt },
                             { role: "user", content: userPrompt }
@@ -2431,7 +2637,7 @@ ${JSON.stringify(topSoftware)}
 
                 if (!response.ok) {
                     const errBody = await response.text();
-                    throw new Error(`Groq API 錯誤 (${response.status}): ${errBody}`);
+                    throw new Error(`Copilot API 錯誤 (${response.status}): ${errBody}`);
                 }
 
                 const resData = await response.json();
@@ -2443,24 +2649,67 @@ ${JSON.stringify(topSoftware)}
                 });
 
                 const fullMergedDownloads = buildBaseDownloads(aiMap);
+                const cacheBundle = {
+                    overview: aiResult.overview || {},
+                    patch_comparison: aiResult.patch_comparison || {},
+                    planning: aiResult.planning || []
+                };
 
-                // 寫入 Turso 快取表
                 await executeTursoSQL(
                     `INSERT OR REPLACE INTO sys_ai_remediation_cache (cache_key, company_name, data_month, planning_json, downloads_json, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now', '+8 hours'));`,
-                    [cacheKey, comp, month, JSON.stringify(aiResult.planning || []), JSON.stringify(fullMergedDownloads)],
+                    [cacheKey, comp, month, JSON.stringify(cacheBundle), JSON.stringify(fullMergedDownloads)],
                     CENTRAL_DB_URL,
                     CENTRAL_AUTH_TOKEN
                 );
 
-                document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（AI 分析完成）`;
+                if (badgeEl) badgeEl.innerText = `${engineCfg.engineLabel} 已完成`;
+                document.getElementById('copilotOverviewMeta').innerText = `引擎：${engineCfg.engineLabel} | 基準：【${comp}】${month} 月份全域數據`;
+                document.getElementById('copilotPatchBadge').innerText = `${engineCfg.engineLabel} 即時研判`;
+                document.getElementById('aiPlanningSubtitle').innerText = `基準：【${comp}】${month} 月份高風險資產（Copilot 運算完成）`;
                 document.getElementById('aiDownloadSubtitle').innerText = `基準：【${comp}】${month} 月份全部納管軟體（共 ${fullMergedDownloads.length} 套軟體）`;
-                renderAIPlanning(aiResult.planning || []);
+
+                renderCopilotOverview(cacheBundle.overview);
+                renderCopilotPatchInsight(cacheBundle.patch_comparison);
+                renderAIPlanning(cacheBundle.planning);
                 renderAIDownloads(fullMergedDownloads);
 
             } catch (err) {
-                console.error("Groq AI 分析失敗:", err);
-                planContainer.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-mono">⚠️ AI 修補規劃生成失敗：${err.message}</div>`;
+                console.error("Copilot 分析運算失敗:", err);
+                if (badgeEl) badgeEl.innerText = `Copilot 異常`;
+                overviewEl.innerHTML = `<div class="col-span-3 text-rose-300 font-mono text-xs">⚠️ Copilot 分析總表運算失敗：${err.message}</div>`;
+                patchEl.innerHTML = `<span class="text-rose-300 font-mono">⚠️ Copilot 數據比對運算失敗：${err.message}</span>`;
+                planContainer.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-mono">⚠️ Copilot 修補規劃生成失敗：${err.message}</div>`;
             }
+        }
+
+        function renderCopilotOverview(ov) {
+            const el = document.getElementById('copilotOverviewContent');
+            if (!el || !ov) return;
+            el.innerHTML = `
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+                    <div class="text-[11px] font-mono text-sky-400 font-bold mb-1"><i class="fa-solid fa-shield-halved mr-1"></i> 整體資安態勢總評</div>
+                    <p class="text-slate-200 leading-relaxed">${ov.risk_posture || '已完成當期弱點盤點與分級統計。'}</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+                    <div class="text-[11px] font-mono text-amber-400 font-bold mb-1"><i class="fa-solid fa-fire mr-1"></i> 風險熱點與集中單位</div>
+                    <p class="text-slate-200 leading-relaxed">${ov.hotspot_summary || '請檢視下方各單位弱點佔比與高風險軟體 TOP 10。'}</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+                    <div class="text-[11px] font-mono text-emerald-400 font-bold mb-1"><i class="fa-solid fa-list-check mr-1"></i> 本月最優先治理行動</div>
+                    <p class="text-slate-200 leading-relaxed">${ov.immediate_action || '建議優先針對 CVSS >= 7.0 軟體執行離峰派送更新。'}</p>
+                </div>
+            `;
+        }
+
+        function renderCopilotPatchInsight(pc) {
+            const el = document.getElementById('copilotPatchContent');
+            if (!el || !pc) return;
+            el.innerHTML = `
+                <div class="space-y-1.5">
+                    <p class="text-slate-200"><span class="text-sky-400 font-mono font-bold">[消長趨勢]</span> ${pc.trend_verdict || '已完成前後期高風險軟體消長比對。'}</p>
+                    <p class="text-amber-300/90"><span class="text-amber-400 font-mono font-bold">[重點關注]</span> ${pc.focus_point || '請留意下方明細中新增弱點項目並安排派送。'}</p>
+                </div>
+            `;
         }
 
         function renderAIPlanning(planningList) {
@@ -2540,7 +2789,7 @@ ${JSON.stringify(topSoftware)}
             if (tabId === 'overview') updateDashboard();
             else if (tabId === 'patch') runPatchAnalysis();
             else if (tabId === 'recommendations' || tabId === 'patch-download') {
-                autoUpdateRemediationWithGroq(false);
+                runCopilotFullDashboardAnalysis(false);
             }
         }
 
